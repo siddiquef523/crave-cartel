@@ -47,6 +47,12 @@ export const Route = createFileRoute("/checkout")({
 
 const PICKUP_SLOTS = ["ASAP (20 min)", "In 30 minutes", "In 45 minutes", "In 1 hour"];
 const EXAMPLES = ["No onion", "Less spicy", "Extra cheese", "Pack cutlery"];
+const DELIVERY_AREAS = ["Bandra", "Mahim", "Citylight"];
+
+function addressIsServiceable(address: string) {
+  const value = address.toLowerCase();
+  return DELIVERY_AREAS.some((area) => value.includes(area.toLowerCase()));
+}
 
 function CheckoutPage() {
   const { lines, subtotal, total, clear } = useCart();
@@ -54,10 +60,19 @@ function CheckoutPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [slot, setSlot] = useState(PICKUP_SLOTS[0]);
+  const [orderType, setOrderType] = useState<"takeaway" | "delivery">("takeaway");
+  const [address, setAddress] = useState("");
   const [payment, setPayment] = useState<"first" | "pickup">("first");
   const [notes, setNotes] = useState("");
   const [placing, setPlacing] = useState(false);
   const [placedOrderNumber, setPlacedOrderNumber] = useState<string | null>(null);
+
+  const isDelivery = orderType === "delivery";
+  const addressError =
+    isDelivery && address.trim().length > 0 && !addressIsServiceable(address)
+      ? "We currently deliver only to Bandra, Mahim and Citylight. Please enter an address in one of these areas."
+      : null;
+  const deliveryReady = !isDelivery || (address.trim().length > 5 && !addressError);
 
   const ordering = useOrderingEnabled();
   const canSubmit =
@@ -66,17 +81,20 @@ function CheckoutPage() {
     !placedOrderNumber &&
     name.trim().length > 1 &&
     phone.trim().length >= 10 &&
+    deliveryReady &&
     lines.length > 0;
 
   function buildWhatsAppBody(orderNumber: string) {
     return [
-      `*New Pickup Order — ${settings?.store_name ?? "Crave Cartel"}*`,
+      `*New ${isDelivery ? "Delivery" : "Pickup"} Order — ${settings?.store_name ?? "Crave Cartel"}*`,
       `Order ID: ${orderNumber}`,
       "",
       `Name: ${name || "-"}`,
       `Phone: ${phone || "-"}`,
+      `Order Type: ${isDelivery ? "Delivery" : "Take Away"}`,
+      ...(isDelivery ? [`Delivery Address: ${address.trim()}`] : []),
       `Pickup: ${slot}`,
-      `Payment: ${payment === "first" ? "Pay First (UPI)" : "Pay at Pickup"}`,
+      `Payment Method: ${payment === "first" ? "Pay First (UPI)" : "Pay at Pickup"}`,
       "",
       "*Items*",
       ...lines.map((l) => `• ${l.qty} × ${l.item.name} — ${formatINR(l.item.price * l.qty)}`),
@@ -84,11 +102,18 @@ function CheckoutPage() {
       `Subtotal: ${formatINR(subtotal)}`,
       `*Grand Total: ${formatINR(total)}*`,
       notes ? `\nInstructions: ${notes}` : "",
+      "",
+      "Can you please send your current location for our delivery partner.",
     ].join("\n");
   }
 
   async function handlePlaceOrder() {
     if (!canSubmit || !settings) return;
+
+    if (isDelivery && !addressIsServiceable(address)) {
+      toast.error("We currently deliver only to Bandra, Mahim and Citylight.");
+      return;
+    }
 
     // Open the tab synchronously (inside the click handler) so browsers don't
     // treat it as a blocked popup once we `await` the order insert below.
@@ -101,6 +126,8 @@ function CheckoutPage() {
         phone: phone.trim(),
         pickup_time: slot,
         payment_method: payment === "first" ? "Pay First" : "Pay at Pickup",
+        order_type: isDelivery ? "delivery" : "takeaway",
+        delivery_address: isDelivery ? address.trim() : null,
         special_instructions: notes.trim() || undefined,
         total,
         items: lines.map((l) => ({
@@ -142,7 +169,8 @@ function CheckoutPage() {
 
         <h1 className="mt-5 font-display text-4xl font-extrabold sm:text-5xl">Checkout</h1>
         <p className="mt-2 max-w-xl text-sm text-muted-foreground sm:text-base">
-          Takeaway only. We confirm every order on WhatsApp before we start cooking.
+          Take away or delivery in Bandra, Mahim & Citylight. We confirm every order on WhatsApp
+          before we start cooking.
         </p>
 
         <StoreClosedBanner className="mt-6" />
@@ -199,6 +227,49 @@ function CheckoutPage() {
                     className="h-12 rounded-xl border-border bg-surface"
                   />
                 </Field>
+              </div>
+
+              <div>
+                <p className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                  <ShoppingBag className="h-4 w-4 text-primary" /> Order type
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <PayOption
+                    active={orderType === "takeaway"}
+                    onClick={() => setOrderType("takeaway")}
+                    title="Take Away"
+                    subtitle="Collect from our kitchen counter"
+                  />
+                  <PayOption
+                    active={orderType === "delivery"}
+                    onClick={() => setOrderType("delivery")}
+                    title="Delivery"
+                    subtitle="Bandra, Mahim & Citylight only"
+                  />
+                </div>
+
+                {isDelivery && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-4"
+                  >
+                    <Field label="Delivery address">
+                      <Textarea
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        rows={4}
+                        disabled={!!placedOrderNumber}
+                        placeholder="Flat / building, street, landmark — must be in Bandra, Mahim or Citylight"
+                        className="min-h-28 rounded-xl border-border bg-surface text-base"
+                      />
+                    </Field>
+                    {addressError && (
+                      <p className="mt-2 text-xs font-semibold text-primary">{addressError}</p>
+                    )}
+                  </motion.div>
+                )}
               </div>
 
               <div>
@@ -349,15 +420,19 @@ function CheckoutPage() {
 
               {!canSubmit && !placedOrderNumber && (
                 <p className="text-center text-xs text-muted-foreground">
-                  {ordering
-                    ? "Add your name and phone number to continue."
-                    : "Ordering is paused while the kitchen is closed."}
+                  {!ordering
+                    ? "Ordering is paused while the kitchen is closed."
+                    : !deliveryReady
+                      ? "Add a delivery address in Bandra, Mahim or Citylight to continue."
+                      : "Add your name and phone number to continue."}
                 </p>
               )}
 
               <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
                 <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-veg" />
-                Pickup only from {settings?.address ?? "our kitchen counter"}
+                {isDelivery
+                  ? "Delivering to Bandra, Mahim & Citylight only"
+                  : `Pickup from ${settings?.address ?? "our kitchen counter"}`}
               </p>
             </motion.aside>
           </div>

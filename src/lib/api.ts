@@ -76,6 +76,8 @@ export type OrderRow = {
   phone: string;
   pickup_time: string;
   payment_method: string;
+  order_type: string;
+  delivery_address: string | null;
   special_instructions: string | null;
   total: number;
   status: OrderStatus;
@@ -84,7 +86,6 @@ export type OrderRow = {
 };
 
 /* --------------------------------------------------------------- helpers */
-
 
 function unwrap<T>(res: { data: T | null; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
@@ -144,7 +145,10 @@ export function useMenu() {
 
   const nameById = new Map((categories.data ?? []).map((c) => [c.id, c.name]));
   const menu: MenuItem[] = (items.data ?? []).map((row) =>
-    toMenuItem(row, row.category_id ? (nameById.get(row.category_id) ?? "Signatures") : "Signatures"),
+    toMenuItem(
+      row,
+      row.category_id ? (nameById.get(row.category_id) ?? "Signatures") : "Signatures",
+    ),
   );
 
   return {
@@ -158,7 +162,9 @@ export function useStoreSettings() {
   return useQuery({
     queryKey: ["store_settings"],
     queryFn: async () =>
-      unwrap(await supabase.from("store_settings").select("*").maybeSingle()) as StoreSettings | null,
+      unwrap(
+        await supabase.from("store_settings").select("*").maybeSingle(),
+      ) as StoreSettings | null,
   });
 }
 
@@ -190,7 +196,7 @@ export function useOrders() {
         await supabase
           .from("orders")
           .select(
-            "id, order_number, customer_name, phone, pickup_time, payment_method, special_instructions, total, status, created_at, order_items(id, name, price, qty)",
+            "id, order_number, customer_name, phone, pickup_time, payment_method, order_type, delivery_address, special_instructions, total, status, created_at, order_items(id, name, price, qty)",
           )
           .order("created_at", { ascending: false }),
       ) as OrderRow[],
@@ -209,8 +215,16 @@ export function useSaveMenuItem() {
   return useMutation({
     mutationFn: async (input: Partial<MenuItemRow> & { id?: string }) => {
       const { id, ...values } = input;
-      if (id) unwrap(await supabase.from("menu_items").update(values).eq("id", id).select().single());
-      else unwrap(await supabase.from("menu_items").insert(values as never).select().single());
+      if (id)
+        unwrap(await supabase.from("menu_items").update(values).eq("id", id).select().single());
+      else
+        unwrap(
+          await supabase
+            .from("menu_items")
+            .insert(values as never)
+            .select()
+            .single(),
+        );
     },
     onSuccess: invalidate,
   });
@@ -232,8 +246,16 @@ export function useSaveCategory() {
   return useMutation({
     mutationFn: async (input: Partial<CategoryRow> & { id?: string }) => {
       const { id, ...values } = input;
-      if (id) unwrap(await supabase.from("categories").update(values).eq("id", id).select().single());
-      else unwrap(await supabase.from("categories").insert(values as never).select().single());
+      if (id)
+        unwrap(await supabase.from("categories").update(values).eq("id", id).select().single());
+      else
+        unwrap(
+          await supabase
+            .from("categories")
+            .insert(values as never)
+            .select()
+            .single(),
+        );
     },
     onSuccess: invalidate,
   });
@@ -272,13 +294,33 @@ export function useUpdateOrderStatus() {
   });
 }
 
+/** Moves every Completed order (and its items) into the archive tables. */
+export function useArchiveCompletedOrders() {
+  const invalidate = useInvalidate(["orders"]);
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("archive_completed_orders");
+      if (error) throw new Error(error.message);
+      return (data as number | null) ?? 0;
+    },
+    onSuccess: invalidate,
+  });
+}
+
 export function useSaveFaq() {
   const invalidate = useInvalidate(["faqs"]);
   return useMutation({
     mutationFn: async (input: Partial<FaqRow> & { id?: string }) => {
       const { id, ...values } = input;
       if (id) unwrap(await supabase.from("faqs").update(values).eq("id", id).select().single());
-      else unwrap(await supabase.from("faqs").insert(values as never).select().single());
+      else
+        unwrap(
+          await supabase
+            .from("faqs")
+            .insert(values as never)
+            .select()
+            .single(),
+        );
     },
     onSuccess: invalidate,
   });
@@ -301,7 +343,14 @@ export function useSaveReview() {
     mutationFn: async (input: Partial<ReviewRow> & { id?: string }) => {
       const { id, ...values } = input;
       if (id) unwrap(await supabase.from("reviews").update(values).eq("id", id).select().single());
-      else unwrap(await supabase.from("reviews").insert(values as never).select().single());
+      else
+        unwrap(
+          await supabase
+            .from("reviews")
+            .insert(values as never)
+            .select()
+            .single(),
+        );
     },
     onSuccess: invalidate,
   });
@@ -325,6 +374,8 @@ export type PlaceOrderInput = {
   phone: string;
   pickup_time: string;
   payment_method: string;
+  order_type: string;
+  delivery_address?: string | null;
   special_instructions?: string;
   total: number;
   items: { menu_item_id: string | null; name: string; price: number; qty: number }[];
@@ -383,4 +434,3 @@ export async function deleteImage(url?: string | null) {
   const path = storagePathFromUrl(url);
   if (path) await supabase.storage.from(BUCKET).remove([path]);
 }
-
