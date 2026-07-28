@@ -92,8 +92,7 @@ function CheckoutPage() {
       `Name: ${name || "-"}`,
       `Phone: ${phone || "-"}`,
       `Order Type: ${isDelivery ? "Delivery" : "Take Away"}`,
-      ...(isDelivery ? [`Delivery Address: ${address.trim()}`] : []),
-      `Pickup: ${slot}`,
+      ...(isDelivery ? [`Delivery Address: ${address.trim()}`] : [`Pickup: ${slot}`]),
       `Payment Method: ${payment === "first" ? "Pay First (UPI)" : "Pay at Pickup"}`,
       "",
       "*Items*",
@@ -102,8 +101,9 @@ function CheckoutPage() {
       `Subtotal: ${formatINR(subtotal)}`,
       `*Grand Total: ${formatINR(total)}*`,
       notes ? `\nInstructions: ${notes}` : "",
-      "",
-      "Can you please send your current location for our delivery partner.",
+      ...(isDelivery
+        ? ["", "Can you please send your current location for our delivery partner."]
+        : []),
     ].join("\n");
   }
 
@@ -124,7 +124,7 @@ function CheckoutPage() {
       const orderNumber = await placeOrder({
         customer_name: name.trim(),
         phone: phone.trim(),
-        pickup_time: slot,
+        pickup_time: isDelivery ? "35-40 Minutes" : slot,
         payment_method: payment === "first" ? "Pay First" : "Pay at Pickup",
         order_type: isDelivery ? "delivery" : "takeaway",
         delivery_address: isDelivery ? address.trim() : null,
@@ -272,28 +272,42 @@ function CheckoutPage() {
                 )}
               </div>
 
-              <div>
-                <p className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                  <Clock className="h-4 w-4 text-primary" /> Pickup time
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {PICKUP_SLOTS.map((s) => (
-                    <button
-                      key={s}
-                      disabled={!!placedOrderNumber}
-                      onClick={() => setSlot(s)}
-                      className={cn(
-                        "rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-300",
-                        slot === s
-                          ? "border-primary bg-primary text-primary-foreground ember-glow"
-                          : "border-border bg-surface text-muted-foreground hover:border-primary/50 hover:text-foreground",
-                      )}
-                    >
-                      {s}
-                    </button>
-                  ))}
+              {isDelivery ? (
+                <div>
+                  <p className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                    <Clock className="h-4 w-4 text-primary" /> Estimated Delivery Time
+                  </p>
+                  <div className="flex gap-3 rounded-2xl border border-primary/25 bg-primary/8 p-4">
+                    <Info className="h-5 w-5 shrink-0 text-primary" />
+                    <p className="text-sm leading-relaxed text-foreground/90">
+                      Delivery in approximately 35–40 minutes.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <p className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                    <Clock className="h-4 w-4 text-primary" /> Pickup time
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {PICKUP_SLOTS.map((s) => (
+                      <button
+                        key={s}
+                        disabled={!!placedOrderNumber}
+                        onClick={() => setSlot(s)}
+                        className={cn(
+                          "rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-300",
+                          slot === s
+                            ? "border-primary bg-primary text-primary-foreground ember-glow"
+                            : "border-border bg-surface text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <p className="mb-3 flex items-center gap-2 text-sm font-semibold">
