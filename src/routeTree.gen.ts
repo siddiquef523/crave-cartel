@@ -15,9 +15,13 @@ import { Route as MenuRouteImport } from './routes/menu'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminCategoriesRouteImport } from './routes/admin/categories'
+import { Route as AdminInventoryRouteImport } from './routes/admin/inventory'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminMenuRouteImport } from './routes/admin/menu'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
+import { Route as AdminRecipesRouteImport } from './routes/admin/recipes'
+import { Route as AdminReportsRouteImport } from './routes/admin/reports'
+import { Route as AdminSalesEntryRouteImport } from './routes/admin/sales-entry'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 
 const IndexRoute = IndexRouteImport.update({
@@ -50,6 +54,11 @@ const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
   path: '/admin/categories',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminInventoryRoute = AdminInventoryRouteImport.update({
+  id: '/admin/inventory',
+  path: '/admin/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
@@ -65,6 +74,21 @@ const AdminOrdersRoute = AdminOrdersRouteImport.update({
   path: '/admin/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRecipesRoute = AdminRecipesRouteImport.update({
+  id: '/admin/recipes',
+  path: '/admin/recipes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/admin/reports',
+  path: '/admin/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSalesEntryRoute = AdminSalesEntryRouteImport.update({
+  id: '/admin/sales-entry',
+  path: '/admin/sales-entry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/admin/settings',
   path: '/admin/settings',
@@ -77,9 +101,13 @@ export interface FileRoutesByFullPath {
   '/menu': typeof MenuRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/inventory': typeof AdminInventoryRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/menu': typeof AdminMenuRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/recipes': typeof AdminRecipesRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/sales-entry': typeof AdminSalesEntryRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -89,9 +117,13 @@ export interface FileRoutesByTo {
   '/menu': typeof MenuRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/inventory': typeof AdminInventoryRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/menu': typeof AdminMenuRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/recipes': typeof AdminRecipesRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/sales-entry': typeof AdminSalesEntryRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -102,9 +134,13 @@ export interface FileRoutesById {
   '/menu': typeof MenuRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/inventory': typeof AdminInventoryRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/menu': typeof AdminMenuRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/recipes': typeof AdminRecipesRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/sales-entry': typeof AdminSalesEntryRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -116,9 +152,13 @@ export interface FileRouteTypes {
     | '/menu'
     | '/sitemap.xml'
     | '/admin/categories'
+    | '/admin/inventory'
     | '/admin/login'
     | '/admin/menu'
     | '/admin/orders'
+    | '/admin/recipes'
+    | '/admin/reports'
+    | '/admin/sales-entry'
     | '/admin/settings'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
@@ -128,9 +168,13 @@ export interface FileRouteTypes {
     | '/menu'
     | '/sitemap.xml'
     | '/admin/categories'
+    | '/admin/inventory'
     | '/admin/login'
     | '/admin/menu'
     | '/admin/orders'
+    | '/admin/recipes'
+    | '/admin/reports'
+    | '/admin/sales-entry'
     | '/admin/settings'
     | '/admin'
   id:
@@ -140,9 +184,13 @@ export interface FileRouteTypes {
     | '/menu'
     | '/sitemap.xml'
     | '/admin/categories'
+    | '/admin/inventory'
     | '/admin/login'
     | '/admin/menu'
     | '/admin/orders'
+    | '/admin/recipes'
+    | '/admin/reports'
+    | '/admin/sales-entry'
     | '/admin/settings'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -153,9 +201,13 @@ export interface RootRouteChildren {
   MenuRoute: typeof MenuRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AdminCategoriesRoute: typeof AdminCategoriesRoute
+  AdminInventoryRoute: typeof AdminInventoryRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminMenuRoute: typeof AdminMenuRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
+  AdminRecipesRoute: typeof AdminRecipesRoute
+  AdminReportsRoute: typeof AdminReportsRoute
+  AdminSalesEntryRoute: typeof AdminSalesEntryRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -204,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/inventory': {
+      id: '/admin/inventory'
+      path: '/admin/inventory'
+      fullPath: '/admin/inventory'
+      preLoaderRoute: typeof AdminInventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/login': {
       id: '/admin/login'
       path: '/admin/login'
@@ -225,6 +284,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/recipes': {
+      id: '/admin/recipes'
+      path: '/admin/recipes'
+      fullPath: '/admin/recipes'
+      preLoaderRoute: typeof AdminRecipesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/admin/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/sales-entry': {
+      id: '/admin/sales-entry'
+      path: '/admin/sales-entry'
+      fullPath: '/admin/sales-entry'
+      preLoaderRoute: typeof AdminSalesEntryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/admin/settings'
@@ -241,9 +321,13 @@ const rootRouteChildren: RootRouteChildren = {
   MenuRoute: MenuRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   AdminCategoriesRoute: AdminCategoriesRoute,
+  AdminInventoryRoute: AdminInventoryRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminMenuRoute: AdminMenuRoute,
   AdminOrdersRoute: AdminOrdersRoute,
+  AdminRecipesRoute: AdminRecipesRoute,
+  AdminReportsRoute: AdminReportsRoute,
+  AdminSalesEntryRoute: AdminSalesEntryRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminIndexRoute: AdminIndexRoute,
 }

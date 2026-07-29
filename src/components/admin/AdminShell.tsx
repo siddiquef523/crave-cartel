@@ -2,10 +2,14 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
+  BarChart3,
+  ChefHat,
   LayoutDashboard,
   ListOrdered,
   LogOut,
   Loader2,
+  Package,
+  PlusSquare,
   Settings,
   Shapes,
   UtensilsCrossed,
@@ -17,6 +21,10 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { label: "Dashboard", to: "/admin", icon: LayoutDashboard },
   { label: "Orders", to: "/admin/orders", icon: ListOrdered },
+  { label: "Sales Entry", to: "/admin/sales-entry", icon: PlusSquare },
+  { label: "Inventory", to: "/admin/inventory", icon: Package },
+  { label: "Recipes", to: "/admin/recipes", icon: ChefHat },
+  { label: "Reports", to: "/admin/reports", icon: BarChart3 },
   { label: "Menu", to: "/admin/menu", icon: UtensilsCrossed },
   { label: "Categories", to: "/admin/categories", icon: Shapes },
   { label: "Settings", to: "/admin/settings", icon: Settings },
@@ -91,7 +99,6 @@ export function AdminShell({
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        {/* mobile nav */}
         <div className="no-scrollbar sticky top-0 z-40 flex gap-2 overflow-x-auto border-b border-border bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
           {NAV.map((n) => (
             <Link

@@ -12,10 +12,25 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { IndianRupee, Loader2, Receipt, TrendingUp, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  IndianRupee,
+  Loader2,
+  Package,
+  Receipt,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { formatINR } from "@/lib/menu-data";
-import { useCategories, useMenuItemRows, useOrders, type OrderRow } from "@/lib/api";
+import {
+  useCategories,
+  useIngredients,
+  useMenuItemRows,
+  useOrders,
+  type OrderRow,
+  type SalesSource,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/")({
@@ -55,6 +70,21 @@ function Dashboard() {
   const { data: orders, isLoading: ordersLoading } = useOrders();
   const { data: menuRows } = useMenuItemRows();
   const { data: categories } = useCategories();
+  const { data: ingredients = [] } = useIngredients();
+
+  const lowStock = ingredients.filter((i) => Number(i.stock_qty) <= Number(i.low_threshold));
+  const inventoryValue = ingredients.reduce(
+    (s, i) => s + Number(i.stock_qty) * Number(i.cost_per_unit),
+    0,
+  );
+
+  const sourceBreakdown = useMemo(() => {
+    const map = new Map<SalesSource, number>();
+    (orders ?? [])
+      .filter((o) => o.status !== "Cancelled" && new Date(o.created_at) >= last7DaysWindow())
+      .forEach((o) => map.set(o.source, (map.get(o.source) ?? 0) + Number(o.total)));
+    return map;
+  }, [orders]);
 
   const stats = useMemo(() => {
     const all = orders ?? [];
@@ -71,7 +101,8 @@ function Dashboard() {
     all.forEach((o) => phoneCounts.set(o.phone, (phoneCounts.get(o.phone) ?? 0) + 1));
     const repeatCustomers = [...phoneCounts.values()].filter((c) => c > 1).length;
     const uniqueCustomers = phoneCounts.size;
-    const repeatRate = uniqueCustomers > 0 ? Math.round((repeatCustomers / uniqueCustomers) * 100) : 0;
+    const repeatRate =
+      uniqueCustomers > 0 ? Math.round((repeatCustomers / uniqueCustomers) * 100) : 0;
 
     const revenueByDay = Array.from({ length: 7 }).map((_, i) => {
       const d = new Date(windowStart);
@@ -103,7 +134,9 @@ function Dashboard() {
 
     const itemQty = new Map<string, number>();
     all.forEach((o) =>
-      o.order_items.forEach((item) => itemQty.set(item.name, (itemQty.get(item.name) ?? 0) + item.qty)),
+      o.order_items.forEach((item) =>
+        itemQty.set(item.name, (itemQty.get(item.name) ?? 0) + item.qty),
+      ),
     );
     const popularNames = [...itemQty.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
     const popularItems = popularNames.map(([name, qty]) => {
@@ -144,15 +177,55 @@ function Dashboard() {
             {[
               { label: "Revenue (7d)", value: formatINR(stats.revenue7d), icon: IndianRupee },
               { label: "Orders (7d)", value: String(stats.orders7d), icon: Receipt },
-              { label: "Avg. order value", value: formatINR(Math.round(stats.avgOrder)), icon: TrendingUp },
+              {
+                label: "Avg. order value",
+                value: formatINR(Math.round(stats.avgOrder)),
+                icon: TrendingUp,
+              },
               { label: "Repeat customers", value: `${stats.repeatRate}%`, icon: Users },
+              {
+                label: "Website (7d)",
+                value: formatINR(sourceBreakdown.get("website") ?? 0),
+                icon: IndianRupee,
+              },
+              {
+                label: "Swiggy (7d)",
+                value: formatINR(sourceBreakdown.get("swiggy") ?? 0),
+                icon: IndianRupee,
+              },
+              {
+                label: "Zomato (7d)",
+                value: formatINR(sourceBreakdown.get("zomato") ?? 0),
+                icon: IndianRupee,
+              },
+              {
+                label: "Walk-in (7d)",
+                value: formatINR(sourceBreakdown.get("walkin") ?? 0),
+                icon: IndianRupee,
+              },
+              {
+                label: "Inventory value",
+                value: formatINR(Math.round(inventoryValue)),
+                icon: Package,
+              },
+              {
+                label: "Low stock",
+                value: String(lowStock.length),
+                icon: AlertTriangle,
+                accent: lowStock.length > 0,
+              },
+              { label: "Ingredients", value: String(ingredients.length), icon: Package },
+              { label: "Menu items", value: String((menuRows ?? []).length), icon: Receipt },
             ].map((s, i) => (
               <motion.div
                 key={s.label}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: i * 0.06 }}
-                className="card-lift rounded-2xl border border-border bg-card p-5"
+                transition={{ duration: 0.4, delay: i * 0.04 }}
+                className={cn(
+                  "card-lift rounded-2xl border p-5",
+                  s.accent ? "border-primary/40 bg-primary/5" : "border-border bg-card",
+                )}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -160,10 +233,24 @@ function Dashboard() {
                   </span>
                   <s.icon className="h-4 w-4 text-primary" />
                 </div>
-                <p className="mt-3 font-display text-3xl font-extrabold">{s.value}</p>
+                <p className="mt-3 font-display text-2xl font-extrabold sm:text-3xl">{s.value}</p>
               </motion.div>
             ))}
           </div>
+
+          {lowStock.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-primary/40 bg-primary/5 p-4">
+              <p className="text-sm font-bold text-primary">
+                <AlertTriangle className="mr-1 inline h-4 w-4" />
+                Low stock:{" "}
+                {lowStock
+                  .slice(0, 6)
+                  .map((i) => `${i.name} (${i.stock_qty}${i.unit})`)
+                  .join(" · ")}
+                {lowStock.length > 6 ? " …" : ""}
+              </p>
+            </div>
+          )}
 
           <div className="mt-6 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
             <div className="rounded-2xl border border-border bg-card p-5">
@@ -178,8 +265,19 @@ function Dashboard() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                    <XAxis
+                      dataKey="day"
+                      stroke="var(--muted-foreground)"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="var(--muted-foreground)"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
                     <Tooltip
                       contentStyle={{
                         background: "var(--popover)",
@@ -188,7 +286,13 @@ function Dashboard() {
                         color: "var(--foreground)",
                       }}
                     />
-                    <Area type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2.5} fill="url(#rev)" />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="var(--primary)"
+                      strokeWidth={2.5}
+                      fill="url(#rev)"
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -205,11 +309,26 @@ function Dashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stats.categorySales} margin={{ left: -18, right: 8, top: 8 }}>
                       <CartesianGrid stroke="var(--border)" vertical={false} />
-                      <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                      <XAxis
+                        dataKey="name"
+                        stroke="var(--muted-foreground)"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="var(--muted-foreground)"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
                       <Tooltip
                         cursor={{ fill: "var(--surface-2)" }}
-                        contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 12 }}
+                        contentStyle={{
+                          background: "var(--popover)",
+                          border: "1px solid var(--border)",
+                          borderRadius: 12,
+                        }}
                       />
                       <Bar dataKey="orders" fill="var(--primary)" radius={[8, 8, 0, 0]} />
                     </BarChart>
@@ -248,12 +367,23 @@ function Dashboard() {
                           key={o.id}
                           className="border-b border-border/60 transition-colors last:border-b-0 hover:bg-surface-2/60"
                         >
-                          <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">{o.order_number}</td>
+                          <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
+                            {o.order_number}
+                          </td>
                           <td className="px-5 py-3.5 font-semibold">{o.customer_name}</td>
-                          <td className="px-5 py-3.5 text-muted-foreground">{o.order_items.length}</td>
-                          <td className="px-5 py-3.5 font-semibold tabular-nums">{formatINR(o.total)}</td>
+                          <td className="px-5 py-3.5 text-muted-foreground">
+                            {o.order_items.length}
+                          </td>
+                          <td className="px-5 py-3.5 font-semibold tabular-nums">
+                            {formatINR(o.total)}
+                          </td>
                           <td className="px-5 py-3.5">
-                            <span className={cn("rounded-full border px-2.5 py-1 text-[11px] font-bold", STATUS_STYLE[o.status])}>
+                            <span
+                              className={cn(
+                                "rounded-full border px-2.5 py-1 text-[11px] font-bold",
+                                STATUS_STYLE[o.status],
+                              )}
+                            >
                               {o.status}
                             </span>
                           </td>
@@ -272,7 +402,10 @@ function Dashboard() {
               ) : (
                 <ul className="mt-4 space-y-3">
                   {stats.popularItems.map((m) => (
-                    <li key={m.name} className="grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-3">
+                    <li
+                      key={m.name}
+                      className="grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-3"
+                    >
                       <img
                         src={m.image}
                         alt={m.name}
@@ -285,7 +418,9 @@ function Dashboard() {
                         <p className="truncate text-sm font-semibold">{m.name}</p>
                         <p className="text-xs text-muted-foreground">{m.qty} sold</p>
                       </div>
-                      <span className="text-sm font-bold tabular-nums">{formatINR(Number(m.price))}</span>
+                      <span className="text-sm font-bold tabular-nums">
+                        {formatINR(Number(m.price))}
+                      </span>
                     </li>
                   ))}
                 </ul>

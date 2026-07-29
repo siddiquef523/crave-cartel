@@ -69,6 +69,9 @@ export const ORDER_STATUSES = [
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+export const SALES_SOURCES = ["website", "swiggy", "zomato", "walkin"] as const;
+export type SalesSource = (typeof SALES_SOURCES)[number];
+
 export type OrderRow = {
   id: string;
   order_number: string;
@@ -81,8 +84,44 @@ export type OrderRow = {
   special_instructions: string | null;
   total: number;
   status: OrderStatus;
+  source: SalesSource;
   created_at: string;
-  order_items: { id: string; name: string; price: number; qty: number }[];
+  order_items: {
+    id: string;
+    name: string;
+    price: number;
+    qty: number;
+    menu_item_id?: string | null;
+  }[];
+};
+
+export type IngredientRow = {
+  id: string;
+  name: string;
+  unit: string;
+  stock_qty: number;
+  low_threshold: number;
+  cost_per_unit: number;
+  supplier: string | null;
+  notes: string | null;
+};
+
+export type RecipeRow = {
+  menu_item_id: string;
+  ingredient_id: string;
+  qty_per_unit: number;
+};
+
+export type InventoryReason = "sale" | "restock" | "waste" | "adjustment" | "reversal";
+
+export type MovementRow = {
+  id: string;
+  ingredient_id: string;
+  delta: number;
+  reason: InventoryReason;
+  order_id: string | null;
+  note: string | null;
+  created_at: string;
 };
 
 /* --------------------------------------------------------------- helpers */
@@ -138,7 +177,6 @@ export function useMenuItemRows() {
   });
 }
 
-/** Menu shaped exactly like the original static MenuItem list. */
 export function useMenu() {
   const categories = useCategories();
   const items = useMenuItemRows();
@@ -196,7 +234,7 @@ export function useOrders() {
         await supabase
           .from("orders")
           .select(
-            "id, order_number, customer_name, phone, pickup_time, payment_method, order_type, delivery_address, special_instructions, total, status, created_at, order_items(id, name, price, qty)",
+            "id, order_number, customer_name, phone, pickup_time, payment_method, order_type, delivery_address, special_instructions, total, status, source, created_at, order_items(id, name, price, qty, menu_item_id)",
           )
           .order("created_at", { ascending: false }),
       ) as OrderRow[],
@@ -294,7 +332,6 @@ export function useUpdateOrderStatus() {
   });
 }
 
-/** Moves every Completed order (and its items) into the archive tables. */
 export function useArchiveCompletedOrders() {
   const invalidate = useInvalidate(["orders"]);
   return useMutation({
@@ -410,7 +447,6 @@ function storagePathFromUrl(url?: string | null) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-/** Uploads an image, removes the previous one, returns a long-lived URL. */
 export async function uploadImage(file: File, previousUrl?: string | null): Promise<string> {
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const path = `${crypto.randomUUID()}.${ext}`;
@@ -433,4 +469,152 @@ export async function uploadImage(file: File, previousUrl?: string | null): Prom
 export async function deleteImage(url?: string | null) {
   const path = storagePathFromUrl(url);
   if (path) await supabase.storage.from(BUCKET).remove([path]);
+}
+
+/* ============================================================
+   Management: ingredients, recipes, movements, external sales
+   ============================================================ */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const sb = supabase as any;
+
+export function useIngredients() {
+  return useQuery({
+    queryKey: ["ingredients"],
+    queryFn: async () =>
+      unwrap(await sb.from("ingredients").select("*").order("name")) as IngredientRow[],
+  });
+}
+
+export function useSaveIngredient() {
+  const invalidate = useInvalidate(["ingredients"]);
+  return useMutation({
+    mutationFn: async (input: Partial<IngredientRow> & { id?: string }) => {
+      const { id, ...values } = input;
+      if (id) unwrap(await sb.from("ingredients").update(values).eq("id", id).select().single());
+      else unwrap(await sb.from("ingredients").insert(values).select().single());
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteIngredient() {
+  const invalidate = useInvalidate(["ingredients"]);
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sb.from("ingredients").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useRecordStockChange() {
+  const invalidate = useInvalidate(["ingredients", "movements"]);
+  return useMutation({
+    mutationFn: async (input: {
+      ingredient_id: string;
+      delta: number;
+      reason: InventoryReason;
+      note?: string | null;
+    }) => {
+      const { error } = await sb.rpc("record_stock_change", {
+        _ingredient_id: input.ingredient_id,
+        _delta: input.delta,
+        _reason: input.reason,
+        _note: input.note ?? null,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useMovements(limit = 100) {
+  return useQuery({
+    queryKey: ["movements", limit],
+    queryFn: async () =>
+      unwrap(
+        await sb
+          .from("inventory_movements")
+          .select("id, ingredient_id, delta, reason, order_id, note, created_at")
+          .order("created_at", { ascending: false })
+          .limit(limit),
+      ) as MovementRow[],
+  });
+}
+
+export function useRecipes() {
+  return useQuery({
+    queryKey: ["recipes"],
+    queryFn: async () => unwrap(await sb.from("recipes").select("*")) as RecipeRow[],
+  });
+}
+
+export function useSaveRecipeLine() {
+  const invalidate = useInvalidate(["recipes"]);
+  return useMutation({
+    mutationFn: async (row: RecipeRow) => {
+      const { error } = await sb.from("recipes").upsert(row);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteRecipeLine() {
+  const invalidate = useInvalidate(["recipes"]);
+  return useMutation({
+    mutationFn: async (input: { menu_item_id: string; ingredient_id: string }) => {
+      const { error } = await sb
+        .from("recipes")
+        .delete()
+        .eq("menu_item_id", input.menu_item_id)
+        .eq("ingredient_id", input.ingredient_id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/* ------- External sales entry (Swiggy / Zomato / Walk-in) ------- */
+
+export type ExternalSaleInput = {
+  source: Exclude<SalesSource, "website">;
+  items: { menu_item_id: string; name: string; price: number; qty: number }[];
+  total: number;
+  note?: string;
+};
+
+export function useCreateExternalSale() {
+  const invalidate = useInvalidate(["orders", "ingredients", "movements"]);
+  return useMutation({
+    mutationFn: async (input: ExternalSaleInput) => {
+      const order = unwrap(
+        await sb
+          .from("orders")
+          .insert({
+            customer_name: input.source === "walkin" ? "Walk-in" : `${input.source} order`,
+            phone: "-",
+            pickup_time: "N/A",
+            payment_method: input.source === "walkin" ? "Cash" : "Online",
+            order_type: input.source === "walkin" ? "walkin" : "delivery",
+            source: input.source,
+            total: input.total,
+            status: "Completed",
+            special_instructions: input.note ?? null,
+            order_number: "pending",
+          })
+          .select("id, order_number")
+          .single(),
+      ) as { id: string; order_number: string };
+
+      const { error } = await sb
+        .from("order_items")
+        .insert(input.items.map((i) => ({ ...i, order_id: order.id })));
+      if (error) throw new Error(error.message);
+      return order.order_number;
+    },
+    onSuccess: invalidate,
+  });
 }
