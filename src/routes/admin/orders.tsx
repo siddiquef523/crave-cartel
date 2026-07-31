@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Archive, Download, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -15,11 +22,13 @@ import {
 import { formatINR } from "@/lib/menu-data";
 import {
   ORDER_STATUSES,
+  SALES_SOURCES,
   useArchiveCompletedOrders,
   useOrders,
   useUpdateOrderStatus,
   type OrderRow,
   type OrderStatus,
+  type SalesSource,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +58,13 @@ const STATUS_STYLE: Record<OrderStatus, string> = {
   Cancelled: "border-border bg-surface-2 text-muted-foreground line-through",
 };
 
+const SOURCE_LABEL: Record<SalesSource, string> = {
+  website: "Website",
+  swiggy: "Swiggy",
+  zomato: "Zomato",
+  walkin: "Walk-in",
+};
+
 function csvCell(value: unknown) {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
 }
@@ -59,14 +75,40 @@ function OrdersPage() {
   const archiveOrders = useArchiveCompletedOrders();
   const [tab, setTab] = useState<(typeof TABS)[number]>("All");
   const [q, setQ] = useState("");
+  const [source, setSource] = useState<SalesSource | "all">("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [archiveView, setArchiveView] = useState<"active" | "archived" | "all">("active");
   const [viewing, setViewing] = useState<OrderRow | null>(null);
 
-  const rows = (orders ?? []).filter(
-    (o) =>
-      (tab === "All" || o.status === tab) &&
-      (!q ||
-        o.customer_name.toLowerCase().includes(q.toLowerCase()) ||
-        o.order_number.toLowerCase().includes(q.toLowerCase())),
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return (orders ?? []).filter((o) => {
+      if (tab !== "All" && o.status !== tab) return false;
+      if (
+        needle &&
+        !o.customer_name.toLowerCase().includes(needle) &&
+        !o.order_number.toLowerCase().includes(needle)
+      )
+        return false;
+      if (source !== "all" && o.source !== source) return false;
+      const day = o.sale_date ?? o.created_at.slice(0, 10);
+      if (fromDate && day < fromDate) return false;
+      if (toDate && day > toDate) return false;
+      if (archiveView === "active" && o.archived) return false;
+      if (archiveView === "archived" && !o.archived) return false;
+      return true;
+    });
+  }, [orders, tab, q, source, fromDate, toDate, archiveView]);
+
+  const totals = useMemo(
+    () => ({
+      count: rows.length,
+      revenue: rows
+        .filter((o) => o.status !== "Cancelled")
+        .reduce((s, o) => s + Number(o.total), 0),
+    }),
+    [rows],
   );
 
   function handleStatusChange(order: OrderRow, status: OrderStatus) {
@@ -146,7 +188,10 @@ function OrdersPage() {
   }
 
   return (
-    <AdminShell title="Orders" description="Every WhatsApp pickup order in one queue">
+    <AdminShell
+      title="Orders"
+      description="Website, Swiggy, Zomato and walk-in orders in one queue"
+    >
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
         <div className="relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -195,6 +240,46 @@ function OrdersPage() {
         ))}
       </div>
 
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <Select value={source} onValueChange={(v) => setSource(v as SalesSource | "all")}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All sources</SelectItem>
+            {SALES_SOURCES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {SOURCE_LABEL[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={archiveView}
+          onValueChange={(v) => setArchiveView(v as "active" | "archived" | "all")}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active only</SelectItem>
+            <SelectItem value="archived">Archived only</SelectItem>
+            <SelectItem value="all">Active + archived</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+        <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-4 rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+        <span className="text-muted-foreground">
+          Showing <strong className="text-foreground">{totals.count}</strong> orders
+        </span>
+        <span className="text-muted-foreground">
+          Revenue <strong className="text-foreground">{formatINR(totals.revenue)}</strong>
+        </span>
+      </div>
+
       <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-card">
         {isLoading ? (
           <div className="grid place-items-center px-6 py-16">
@@ -214,6 +299,7 @@ function OrdersPage() {
                 <tr className="border-b border-border text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
                   {[
                     "Order ID",
+                    "Source",
                     "Customer",
                     "Pickup",
                     "Items",
@@ -236,6 +322,16 @@ function OrdersPage() {
                   >
                     <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
                       {o.order_number}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="rounded-full border border-border bg-surface-2 px-2.5 py-1 text-[11px] font-bold">
+                        {SOURCE_LABEL[o.source] ?? o.source}
+                      </span>
+                      {o.archived && (
+                        <span className="ml-1 text-[10px] font-bold uppercase text-muted-foreground">
+                          archived
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <p className="font-semibold">{o.customer_name}</p>

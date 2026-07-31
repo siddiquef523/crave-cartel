@@ -31,6 +31,7 @@ import {
   type IngredientRow,
   type InventoryReason,
 } from "@/lib/api";
+import { useIngredientCategories, useUnits } from "@/lib/management";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/inventory")({
@@ -45,11 +46,14 @@ export const Route = createFileRoute("/admin/inventory")({
   component: InventoryPage,
 });
 
-const UNITS = ["g", "kg", "ml", "l", "pcs"];
+const FALLBACK_UNITS = ["g", "kg", "ml", "l", "pcs"];
+const UNCATEGORISED = "__none__";
 
 function InventoryPage() {
   const { data: ingredients = [] } = useIngredients();
   const { data: movements = [] } = useMovements(50);
+  const { data: categories = [] } = useIngredientCategories();
+  const { data: unitRows = [] } = useUnits();
   const save = useSaveIngredient();
   const del = useDeleteIngredient();
   const change = useRecordStockChange();
@@ -60,11 +64,23 @@ function InventoryPage() {
     reason: InventoryReason;
   } | null>(null);
   const [q, setQ] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [lowOnly, setLowOnly] = useState(false);
+
+  const unitOptions = unitRows.length > 0 ? unitRows.map((u) => u.name) : FALLBACK_UNITS;
+  const categoryName = (id: string | null | undefined) =>
+    categories.find((c) => c.id === id)?.name ?? "Uncategorised";
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return s ? ingredients.filter((i) => i.name.toLowerCase().includes(s)) : ingredients;
-  }, [ingredients, q]);
+    return ingredients.filter((i) => {
+      if (s && !i.name.toLowerCase().includes(s)) return false;
+      if (categoryFilter !== "all" && (i.category_id ?? UNCATEGORISED) !== categoryFilter)
+        return false;
+      if (lowOnly && Number(i.stock_qty) > Number(i.low_threshold)) return false;
+      return true;
+    });
+  }, [ingredients, q, categoryFilter, lowOnly]);
 
   const lowStock = ingredients.filter((i) => Number(i.stock_qty) <= Number(i.low_threshold));
   const totalValue = ingredients.reduce(
@@ -74,9 +90,10 @@ function InventoryPage() {
 
   function exportCSV() {
     const rows = [
-      ["Name", "Unit", "Stock", "Low threshold", "Cost/unit", "Value", "Supplier"],
+      ["Name", "Category", "Unit", "Stock", "Low threshold", "Cost/unit", "Value", "Supplier"],
       ...ingredients.map((i) => [
         i.name,
+        categoryName(i.category_id),
         i.unit,
         i.stock_qty,
         i.low_threshold,
@@ -141,18 +158,53 @@ function InventoryPage() {
       )}
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="border-b border-border p-4">
+        <div className="space-y-3 border-b border-border p-4">
           <Input
             placeholder="Search ingredients…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
+          <div className="no-scrollbar flex gap-2 overflow-x-auto">
+            {[
+              { id: "all", name: "All categories" },
+              ...categories.map((c) => ({ id: c.id, name: c.name })),
+              { id: UNCATEGORISED, name: "Uncategorised" },
+            ].map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setCategoryFilter(c.id)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                  categoryFilter === c.id
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-surface text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {c.name}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setLowOnly((v) => !v)}
+              className={cn(
+                "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                lowOnly
+                  ? "border-primary bg-primary/12 text-primary"
+                  : "border-border bg-surface text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />
+              Low stock only
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
                 <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Stock</th>
                 <th className="px-4 py-3">Threshold</th>
                 <th className="px-4 py-3">Cost/unit</th>
@@ -163,7 +215,7 @@ function InventoryPage() {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                     No ingredients yet — add your first one.
                   </td>
                 </tr>
@@ -172,7 +224,19 @@ function InventoryPage() {
                 const low = Number(i.stock_qty) <= Number(i.low_threshold);
                 return (
                   <tr key={i.id} className="border-b border-border/60 last:border-b-0">
-                    <td className="px-4 py-3 font-semibold">{i.name}</td>
+                    <td className="px-4 py-3 font-semibold">
+                      <span className="flex items-center gap-2">
+                        {i.name}
+                        {low && (
+                          <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                            Low
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {categoryName(i.category_id)}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={cn("font-mono tabular-nums", low && "text-primary font-bold")}
@@ -292,6 +356,27 @@ function InventoryPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <Label>Category</Label>
+                  <Select
+                    value={editing.category_id ?? UNCATEGORISED}
+                    onValueChange={(v) =>
+                      setEditing({ ...editing, category_id: v === UNCATEGORISED ? null : v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Uncategorised" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={UNCATEGORISED}>Uncategorised</SelectItem>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label>Unit</Label>
                   <Select
                     value={editing.unit ?? "g"}
@@ -301,7 +386,7 @@ function InventoryPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {UNITS.map((u) => (
+                      {unitOptions.map((u: string) => (
                         <SelectItem key={u} value={u}>
                           {u}
                         </SelectItem>

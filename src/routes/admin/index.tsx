@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
@@ -22,6 +22,13 @@ import {
   Users,
 } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatINR } from "@/lib/menu-data";
 import {
   useCategories,
@@ -31,6 +38,7 @@ import {
   type OrderRow,
   type SalesSource,
 } from "@/lib/api";
+import { useMenuItemCosts } from "@/lib/management";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/")({
@@ -59,9 +67,26 @@ const STATUS_STYLE: Record<string, string> = {
   Cancelled: "border-border bg-surface-2 text-muted-foreground",
 };
 
-function last7DaysWindow() {
+const RANGES = {
+  "7": "Last 7 days",
+  "30": "Last 30 days",
+  "90": "Last 90 days",
+  all: "All time",
+} as const;
+type RangeKey = keyof typeof RANGES;
+
+const SOURCE_FILTERS = [
+  { key: "all", label: "All sources" },
+  { key: "website", label: "Website" },
+  { key: "swiggy", label: "Swiggy" },
+  { key: "zomato", label: "Zomato" },
+  { key: "walkin", label: "Walk-in" },
+] as const;
+
+function windowStartFor(range: RangeKey) {
+  if (range === "all") return new Date(0);
   const start = new Date();
-  start.setDate(start.getDate() - 6);
+  start.setDate(start.getDate() - (Number(range) - 1));
   start.setHours(0, 0, 0, 0);
   return start;
 }
@@ -71,6 +96,11 @@ function Dashboard() {
   const { data: menuRows } = useMenuItemRows();
   const { data: categories } = useCategories();
   const { data: ingredients = [] } = useIngredients();
+  const { data: itemCosts = [] } = useMenuItemCosts();
+
+  const [range, setRange] = useState<RangeKey>("7");
+  const [sourceFilter, setSourceFilter] = useState<(typeof SOURCE_FILTERS)[number]["key"]>("all");
+  const rangeLabel = RANGES[range];
 
   const lowStock = ingredients.filter((i) => Number(i.stock_qty) <= Number(i.low_threshold));
   const inventoryValue = ingredients.reduce(
@@ -80,15 +110,16 @@ function Dashboard() {
 
   const sourceBreakdown = useMemo(() => {
     const map = new Map<SalesSource, number>();
+    const start = windowStartFor(range);
     (orders ?? [])
-      .filter((o) => o.status !== "Cancelled" && new Date(o.created_at) >= last7DaysWindow())
+      .filter((o) => o.status !== "Cancelled" && new Date(o.created_at) >= start)
       .forEach((o) => map.set(o.source, (map.get(o.source) ?? 0) + Number(o.total)));
     return map;
-  }, [orders]);
+  }, [orders, range]);
 
   const stats = useMemo(() => {
-    const all = orders ?? [];
-    const windowStart = last7DaysWindow();
+    const all = (orders ?? []).filter((o) => sourceFilter === "all" || o.source === sourceFilter);
+    const windowStart = windowStartFor(range);
     const recentWindow = all.filter(
       (o) => new Date(o.created_at) >= windowStart && o.status !== "Cancelled",
     );
@@ -97,6 +128,16 @@ function Dashboard() {
     const orders7d = recentWindow.length;
     const avgOrder = orders7d > 0 ? revenue7d / orders7d : 0;
 
+    const costById = new Map(itemCosts.map((c) => [c.menu_item_id, Number(c.unit_cost)]));
+    const cogs = recentWindow.reduce(
+      (sum, o) =>
+        sum +
+        o.order_items.reduce((s, it) => s + (costById.get(it.menu_item_id ?? "") ?? 0) * it.qty, 0),
+      0,
+    );
+    const grossProfit = revenue7d - cogs;
+    const margin = revenue7d > 0 ? Math.round((grossProfit / revenue7d) * 100) : 0;
+
     const phoneCounts = new Map<string, number>();
     all.forEach((o) => phoneCounts.set(o.phone, (phoneCounts.get(o.phone) ?? 0) + 1));
     const repeatCustomers = [...phoneCounts.values()].filter((c) => c > 1).length;
@@ -104,14 +145,22 @@ function Dashboard() {
     const repeatRate =
       uniqueCustomers > 0 ? Math.round((repeatCustomers / uniqueCustomers) * 100) : 0;
 
-    const revenueByDay = Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date(windowStart);
+    const chartDays = range === "all" ? 30 : Number(range);
+    const chartStart = new Date();
+    chartStart.setDate(chartStart.getDate() - (chartDays - 1));
+    chartStart.setHours(0, 0, 0, 0);
+    const revenueByDay = Array.from({ length: chartDays }).map((_, i) => {
+      const d = new Date(chartStart);
       d.setDate(d.getDate() + i);
       const label = DAY_LABELS[d.getDay()];
-      const dayTotal = recentWindow
+      const dayTotal = all
+        .filter((o) => o.status !== "Cancelled")
         .filter((o) => new Date(o.created_at).toDateString() === d.toDateString())
         .reduce((sum, o) => sum + Number(o.total), 0);
-      return { day: label, value: dayTotal };
+      return {
+        day: chartDays > 10 ? `${d.getDate()}/${d.getMonth() + 1}` : label,
+        value: dayTotal,
+      };
     });
 
     const categoryByMenuItemId = new Map<string, string>();
@@ -157,16 +206,53 @@ function Dashboard() {
       revenue7d,
       orders7d,
       avgOrder,
+      cogs,
+      grossProfit,
+      margin,
       repeatRate,
       revenueByDay,
       categorySales,
       popularItems,
       recentOrders,
     };
-  }, [orders, menuRows, categories]);
+  }, [orders, menuRows, categories, range, sourceFilter, itemCosts]);
 
   return (
-    <AdminShell title="Dashboard" description="Live view of orders, revenue and top sellers">
+    <AdminShell
+      title="Dashboard"
+      description="Live view of orders, revenue and top sellers"
+      actions={
+        <div className="flex flex-wrap gap-2">
+          <Select value={range} onValueChange={(v) => setRange(v as RangeKey)}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(RANGES).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  {v}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={sourceFilter}
+            onValueChange={(v) => setSourceFilter(v as typeof sourceFilter)}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SOURCE_FILTERS.map((s) => (
+                <SelectItem key={s.key} value={s.key}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      }
+    >
       {ordersLoading ? (
         <div className="grid place-items-center py-24">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -175,31 +261,42 @@ function Dashboard() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              { label: "Revenue (7d)", value: formatINR(stats.revenue7d), icon: IndianRupee },
-              { label: "Orders (7d)", value: String(stats.orders7d), icon: Receipt },
+              {
+                label: `Revenue (${rangeLabel})`,
+                value: formatINR(stats.revenue7d),
+                icon: IndianRupee,
+              },
+              { label: `Orders (${rangeLabel})`, value: String(stats.orders7d), icon: Receipt },
               {
                 label: "Avg. order value",
                 value: formatINR(Math.round(stats.avgOrder)),
                 icon: TrendingUp,
               },
+              {
+                label: "Gross profit",
+                value: formatINR(Math.round(stats.grossProfit)),
+                icon: TrendingUp,
+              },
+              { label: "COGS", value: formatINR(Math.round(stats.cogs)), icon: IndianRupee },
+              { label: "Margin", value: `${stats.margin}%`, icon: TrendingUp },
               { label: "Repeat customers", value: `${stats.repeatRate}%`, icon: Users },
               {
-                label: "Website (7d)",
+                label: "Website",
                 value: formatINR(sourceBreakdown.get("website") ?? 0),
                 icon: IndianRupee,
               },
               {
-                label: "Swiggy (7d)",
+                label: "Swiggy",
                 value: formatINR(sourceBreakdown.get("swiggy") ?? 0),
                 icon: IndianRupee,
               },
               {
-                label: "Zomato (7d)",
+                label: "Zomato",
                 value: formatINR(sourceBreakdown.get("zomato") ?? 0),
                 icon: IndianRupee,
               },
               {
-                label: "Walk-in (7d)",
+                label: "Walk-in",
                 value: formatINR(sourceBreakdown.get("walkin") ?? 0),
                 icon: IndianRupee,
               },
@@ -254,7 +351,7 @@ function Dashboard() {
 
           <div className="mt-6 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
             <div className="rounded-2xl border border-border bg-card p-5">
-              <h2 className="font-display text-lg font-bold">Revenue this week</h2>
+              <h2 className="font-display text-lg font-bold">Revenue trend</h2>
               <div className="mt-5 h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={stats.revenueByDay} margin={{ left: -18, right: 8, top: 8 }}>

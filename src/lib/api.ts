@@ -2,6 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { MenuItem } from "./menu-data";
 
+/* Untyped escape hatch: the generated database types are regenerated only
+   after the restaurant-management SQL is applied. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const sb = supabase as any;
+
 /* ------------------------------------------------------------------ types */
 
 export type CategoryRow = {
@@ -85,6 +90,9 @@ export type OrderRow = {
   total: number;
   status: OrderStatus;
   source: SalesSource;
+  sale_date: string;
+  archived: boolean;
+  archived_month: string | null;
   created_at: string;
   order_items: {
     id: string;
@@ -99,6 +107,7 @@ export type IngredientRow = {
   id: string;
   name: string;
   unit: string;
+  category_id: string | null;
   stock_qty: number;
   low_threshold: number;
   cost_per_unit: number;
@@ -152,6 +161,7 @@ export function toMenuItem(row: MenuItemRow, categoryName: string): MenuItem {
 export function useCategories() {
   return useQuery({
     queryKey: ["categories"],
+    staleTime: 5 * 60 * 1000,
     queryFn: async () =>
       unwrap(
         await supabase
@@ -165,6 +175,7 @@ export function useCategories() {
 export function useMenuItemRows() {
   return useQuery({
     queryKey: ["menu_items"],
+    staleTime: 5 * 60 * 1000,
     queryFn: async () =>
       unwrap(
         await supabase
@@ -229,12 +240,13 @@ export function useReviews() {
 export function useOrders() {
   return useQuery({
     queryKey: ["orders"],
+    staleTime: 30 * 1000,
     queryFn: async () =>
       unwrap(
-        await supabase
+        await sb
           .from("orders")
           .select(
-            "id, order_number, customer_name, phone, pickup_time, payment_method, order_type, delivery_address, special_instructions, total, status, source, created_at, order_items(id, name, price, qty, menu_item_id)",
+            "id, order_number, customer_name, phone, pickup_time, payment_method, order_type, delivery_address, special_instructions, total, status, source, sale_date, archived, archived_month, created_at, order_items(id, name, price, qty, menu_item_id)",
           )
           .order("created_at", { ascending: false }),
       ) as OrderRow[],
@@ -336,7 +348,7 @@ export function useArchiveCompletedOrders() {
   const invalidate = useInvalidate(["orders"]);
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.rpc("archive_completed_orders");
+      const { data, error } = await sb.rpc("archive_completed_orders");
       if (error) throw new Error(error.message);
       return (data as number | null) ?? 0;
     },
@@ -475,12 +487,10 @@ export async function deleteImage(url?: string | null) {
    Management: ingredients, recipes, movements, external sales
    ============================================================ */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const sb = supabase as any;
-
 export function useIngredients() {
   return useQuery({
     queryKey: ["ingredients"],
+    staleTime: 60 * 1000,
     queryFn: async () =>
       unwrap(await sb.from("ingredients").select("*").order("name")) as IngredientRow[],
   });
@@ -583,18 +593,28 @@ export type ExternalSaleInput = {
   source: Exclude<SalesSource, "website">;
   items: { menu_item_id: string; name: string; price: number; qty: number }[];
   total: number;
+  sale_date?: string;
+  customer_name?: string;
   note?: string;
 };
 
 export function useCreateExternalSale() {
-  const invalidate = useInvalidate(["orders", "ingredients", "movements"]);
+  const invalidate = useInvalidate([
+    "orders",
+    "ingredients",
+    "movements",
+    "sales_summary",
+    "menu_item_costs",
+  ]);
   return useMutation({
     mutationFn: async (input: ExternalSaleInput) => {
       const order = unwrap(
         await sb
           .from("orders")
           .insert({
-            customer_name: input.source === "walkin" ? "Walk-in" : `${input.source} order`,
+            customer_name:
+              input.customer_name?.trim() ||
+              (input.source === "walkin" ? "Walk-in" : `${input.source} order`),
             phone: "-",
             pickup_time: "N/A",
             payment_method: input.source === "walkin" ? "Cash" : "Online",
@@ -602,6 +622,7 @@ export function useCreateExternalSale() {
             source: input.source,
             total: input.total,
             status: "Completed",
+            sale_date: input.sale_date ?? new Date().toISOString().slice(0, 10),
             special_instructions: input.note ?? null,
             order_number: "pending",
           })

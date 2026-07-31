@@ -15,7 +15,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Download, Printer } from "lucide-react";
+import { Download, FileSpreadsheet, Printer } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/select";
 import { formatINR } from "@/lib/menu-data";
 import { useOrders, type SalesSource } from "@/lib/api";
+import { useMenuItemCosts } from "@/lib/management";
+import { exportCSV as csvExport, exportExcel, printDocument, stamp } from "@/lib/exporters";
 
 export const Route = createFileRoute("/admin/reports")({
   head: () => ({
@@ -51,6 +53,7 @@ const RANGES = { "7": "Last 7 days", "30": "Last 30 days", "90": "Last 90 days" 
 
 function ReportsPage() {
   const { data: orders = [] } = useOrders();
+  const { data: itemCosts = [] } = useMenuItemCosts();
   const [range, setRange] = useState<keyof typeof RANGES>("30");
 
   const days = Number(range);
@@ -117,29 +120,99 @@ function ReportsPage() {
   const totalOrders = filtered.length;
   const avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   const uniqueCustomers = new Set(filtered.map((o) => o.phone)).size;
+  const totalItems = filtered.reduce((s, o) => s + o.order_items.reduce((n, i) => n + i.qty, 0), 0);
 
-  function exportCSV() {
-    const rows = [
-      ["Order #", "Date", "Source", "Customer", "Phone", "Total", "Items"],
-      ...filtered.map((o) => [
-        o.order_number,
-        new Date(o.created_at).toISOString(),
-        o.source,
-        o.customer_name,
-        o.phone,
-        Number(o.total).toFixed(2),
-        o.order_items.map((i) => `${i.name} x${i.qty}`).join("; "),
-      ]),
-    ];
-    const csv = rows
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `sales-report-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const costById = useMemo(
+    () => new Map(itemCosts.map((c) => [c.menu_item_id, Number(c.unit_cost)])),
+    [itemCosts],
+  );
+  const totalCogs = useMemo(
+    () =>
+      filtered.reduce(
+        (s, o) =>
+          s +
+          o.order_items.reduce((n, i) => n + (costById.get(i.menu_item_id ?? "") ?? 0) * i.qty, 0),
+        0,
+      ),
+    [filtered, costById],
+  );
+  const grossProfit = totalRevenue - totalCogs;
+  const margin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+
+  type Row = (typeof filtered)[number];
+  const orderColumns = [
+    { header: "Order #", value: (o: Row) => o.order_number },
+    { header: "Date", value: (o: Row) => o.sale_date ?? o.created_at.slice(0, 10) },
+    { header: "Source", value: (o: Row) => o.source },
+    { header: "Customer", value: (o: Row) => o.customer_name },
+    {
+      header: "Items",
+      value: (o: Row) => o.order_items.map((i) => `${i.name} x${i.qty}`).join("; "),
+    },
+    { header: "Total", value: (o: Row) => Number(o.total), align: "right" as const },
+  ];
+
+  const subtitle = `${RANGES[range]} · generated ${new Date().toLocaleString()}`;
+  const kpis = [
+    { label: "Revenue", value: formatINR(totalRevenue) },
+    { label: "Orders", value: String(totalOrders) },
+    { label: "Items sold", value: String(totalItems) },
+    { label: "Avg order", value: formatINR(Math.round(avgOrder)) },
+    { label: "COGS", value: formatINR(Math.round(totalCogs)) },
+    { label: "Gross profit", value: formatINR(Math.round(grossProfit)) },
+    { label: "Margin", value: `${margin.toFixed(1)}%` },
+    { label: "Unique customers", value: String(uniqueCustomers) },
+  ];
+
+  function handleCSV() {
+    csvExport(`sales-report-${stamp()}.csv`, orderColumns, filtered);
+  }
+  function handleExcel() {
+    exportExcel(`sales-report-${stamp()}.xls`, "Sales", orderColumns, filtered);
+  }
+  function handlePDF() {
+    printDocument({
+      title: "Crave Cartel — Sales Report",
+      subtitle,
+      kpis,
+      sections: [
+        {
+          title: "Source breakdown",
+          columns: [
+            { header: "Source", value: (s: (typeof sourceBreakdown)[number]) => s.source },
+            {
+              header: "Orders",
+              value: (s: (typeof sourceBreakdown)[number]) => s.count,
+              align: "right" as const,
+            },
+            {
+              header: "Revenue",
+              value: (s: (typeof sourceBreakdown)[number]) => formatINR(s.revenue),
+              align: "right" as const,
+            },
+          ],
+          rows: sourceBreakdown,
+        },
+        {
+          title: "Top items",
+          columns: [
+            { header: "Item", value: (i: (typeof topItems)[number]) => i.name },
+            {
+              header: "Qty",
+              value: (i: (typeof topItems)[number]) => i.qty,
+              align: "right" as const,
+            },
+            {
+              header: "Revenue",
+              value: (i: (typeof topItems)[number]) => formatINR(i.revenue),
+              align: "right" as const,
+            },
+          ],
+          rows: topItems,
+        },
+        { title: "Orders", columns: orderColumns, rows: filtered },
+      ],
+    });
   }
 
   return (
@@ -160,13 +233,17 @@ function ReportsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={exportCSV}>
+          <Button variant="outline" onClick={handleCSV}>
             <Download className="mr-2 h-4 w-4" />
             CSV
           </Button>
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button variant="outline" onClick={handleExcel}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Excel
+          </Button>
+          <Button variant="outline" onClick={handlePDF}>
             <Printer className="mr-2 h-4 w-4" />
-            Print
+            PDF
           </Button>
         </div>
       }
@@ -175,6 +252,10 @@ function ReportsPage() {
         <Kpi label="Revenue" value={formatINR(totalRevenue)} />
         <Kpi label="Orders" value={String(totalOrders)} />
         <Kpi label="Avg order" value={formatINR(Math.round(avgOrder))} />
+        <Kpi label="Items sold" value={String(totalItems)} />
+        <Kpi label="COGS" value={formatINR(Math.round(totalCogs))} />
+        <Kpi label="Gross profit" value={formatINR(Math.round(grossProfit))} />
+        <Kpi label="Margin" value={`${margin.toFixed(1)}%`} />
         <Kpi label="Unique customers" value={String(uniqueCustomers)} />
       </div>
 
@@ -319,6 +400,17 @@ function ReportsPage() {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t border-border bg-surface-2/60 font-bold">
+                <td className="px-4 py-3">Total</td>
+                <td className="px-4 py-3 text-right tabular-nums">{totalOrders}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{formatINR(totalRevenue)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {formatINR(Math.round(avgOrder))}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">100%</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>

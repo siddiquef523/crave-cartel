@@ -3,7 +3,9 @@ import { useEffect } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
+  CalendarCheck,
   ChefHat,
+  History,
   LayoutDashboard,
   ListOrdered,
   LogOut,
@@ -12,23 +14,53 @@ import {
   PlusSquare,
   Settings,
   Shapes,
+  TruckIcon,
   UtensilsCrossed,
 } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { label: "Dashboard", to: "/admin", icon: LayoutDashboard },
-  { label: "Orders", to: "/admin/orders", icon: ListOrdered },
-  { label: "Sales Entry", to: "/admin/sales-entry", icon: PlusSquare },
-  { label: "Inventory", to: "/admin/inventory", icon: Package },
-  { label: "Recipes", to: "/admin/recipes", icon: ChefHat },
-  { label: "Reports", to: "/admin/reports", icon: BarChart3 },
-  { label: "Menu", to: "/admin/menu", icon: UtensilsCrossed },
-  { label: "Categories", to: "/admin/categories", icon: Shapes },
-  { label: "Settings", to: "/admin/settings", icon: Settings },
-] as const;
+type NavItem = {
+  label: string;
+  to: string;
+  icon: typeof LayoutDashboard;
+};
+
+type NavGroup = { label: string; items: NavItem[] };
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Overview",
+    items: [{ label: "Dashboard", to: "/admin", icon: LayoutDashboard }],
+  },
+  {
+    label: "Website Management",
+    items: [
+      { label: "Menu", to: "/admin/menu", icon: UtensilsCrossed },
+      { label: "Categories", to: "/admin/categories", icon: Shapes },
+      { label: "Orders", to: "/admin/orders", icon: ListOrdered },
+    ],
+  },
+  {
+    label: "Restaurant Management",
+    items: [
+      { label: "Sales Entry", to: "/admin/sales-entry", icon: PlusSquare },
+      { label: "Inventory", to: "/admin/inventory", icon: Package },
+      { label: "Stock In", to: "/admin/stock-in", icon: TruckIcon },
+      { label: "Inventory History", to: "/admin/inventory-history", icon: History },
+      { label: "Recipes", to: "/admin/recipes", icon: ChefHat },
+      { label: "Reports", to: "/admin/reports", icon: BarChart3 },
+      { label: "Monthly Cycle", to: "/admin/monthly", icon: CalendarCheck },
+    ],
+  },
+  {
+    label: "System",
+    items: [{ label: "Settings", to: "/admin/settings", icon: Settings }],
+  },
+];
+
+const FLAT_NAV: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
 
 export function AdminShell({
   title,
@@ -65,25 +97,32 @@ export function AdminShell({
         <div className="px-5 py-6">
           <Logo />
         </div>
-        <nav className="flex-1 space-y-1 px-3">
-          {NAV.map((n) => {
-            const active = pathname === n.to;
-            return (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-300",
-                  active
-                    ? "bg-primary/12 text-primary"
-                    : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
-                )}
-              >
-                <n.icon className="h-4 w-4 shrink-0" />
-                {n.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="space-y-1">
+              <div className="px-3.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                {group.label}
+              </div>
+              {group.items.map((n) => {
+                const active = pathname === n.to;
+                return (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-300",
+                      active
+                        ? "bg-primary/12 text-primary"
+                        : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
+                    )}
+                  >
+                    <n.icon className="h-4 w-4 shrink-0" />
+                    {n.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="p-3">
           <button
@@ -100,7 +139,7 @@ export function AdminShell({
 
       <div className="flex min-w-0 flex-col">
         <div className="no-scrollbar sticky top-0 z-40 flex gap-2 overflow-x-auto border-b border-border bg-background/90 px-4 py-3 backdrop-blur lg:hidden">
-          {NAV.map((n) => (
+          {FLAT_NAV.map((n) => (
             <Link
               key={n.to}
               to={n.to}

@@ -36,6 +36,8 @@ function SalesEntryPage() {
   const create = useCreateExternalSale();
 
   const [source, setSource] = useState<Exclude<SalesSource, "website">>("swiggy");
+  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [customerName, setCustomerName] = useState("");
   const [lines, setLines] = useState<LineItem[]>([]);
   const [note, setNote] = useState("");
   const [query, setQuery] = useState("");
@@ -73,11 +75,14 @@ function SalesEntryPage() {
         source,
         items: lines,
         total,
+        sale_date: saleDate,
+        customer_name: customerName.trim() || undefined,
         note: note || undefined,
       });
       toast.success(`Recorded ${SOURCE_LABEL[source]} sale ${orderNo}`);
       setLines([]);
       setNote("");
+      setCustomerName("");
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -109,6 +114,28 @@ function SalesEntryPage() {
                 {SOURCE_LABEL[s]}
               </button>
             ))}
+          </div>
+
+          <div className="mb-4 grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="sale-date">Sale date</Label>
+              <Input
+                id="sale-date"
+                type="date"
+                value={saleDate}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setSaleDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="sale-customer">Customer / reference (optional)</Label>
+              <Input
+                id="sale-customer"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder={source === "walkin" ? "Walk-in" : `${SOURCE_LABEL[source]} order`}
+              />
+            </div>
           </div>
 
           <Input

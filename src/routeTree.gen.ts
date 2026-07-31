@@ -16,13 +16,16 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminCategoriesRouteImport } from './routes/admin/categories'
 import { Route as AdminInventoryRouteImport } from './routes/admin/inventory'
+import { Route as AdminInventoryHistoryRouteImport } from './routes/admin/inventory-history'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminMenuRouteImport } from './routes/admin/menu'
+import { Route as AdminMonthlyRouteImport } from './routes/admin/monthly'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminRecipesRouteImport } from './routes/admin/recipes'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AdminSalesEntryRouteImport } from './routes/admin/sales-entry'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminStockInRouteImport } from './routes/admin/stock-in'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -59,6 +62,11 @@ const AdminInventoryRoute = AdminInventoryRouteImport.update({
   path: '/admin/inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminInventoryHistoryRoute = AdminInventoryHistoryRouteImport.update({
+  id: '/admin/inventory-history',
+  path: '/admin/inventory-history',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
@@ -67,6 +75,11 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 const AdminMenuRoute = AdminMenuRouteImport.update({
   id: '/admin/menu',
   path: '/admin/menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMonthlyRoute = AdminMonthlyRouteImport.update({
+  id: '/admin/monthly',
+  path: '/admin/monthly',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
@@ -94,6 +107,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/admin/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminStockInRoute = AdminStockInRouteImport.update({
+  id: '/admin/stock-in',
+  path: '/admin/stock-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -102,13 +120,16 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/inventory': typeof AdminInventoryRoute
+  '/admin/inventory-history': typeof AdminInventoryHistoryRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/menu': typeof AdminMenuRoute
+  '/admin/monthly': typeof AdminMonthlyRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/recipes': typeof AdminRecipesRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/sales-entry': typeof AdminSalesEntryRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/stock-in': typeof AdminStockInRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -118,13 +139,16 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/inventory': typeof AdminInventoryRoute
+  '/admin/inventory-history': typeof AdminInventoryHistoryRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/menu': typeof AdminMenuRoute
+  '/admin/monthly': typeof AdminMonthlyRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/recipes': typeof AdminRecipesRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/sales-entry': typeof AdminSalesEntryRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/stock-in': typeof AdminStockInRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -135,13 +159,16 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/inventory': typeof AdminInventoryRoute
+  '/admin/inventory-history': typeof AdminInventoryHistoryRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/menu': typeof AdminMenuRoute
+  '/admin/monthly': typeof AdminMonthlyRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/recipes': typeof AdminRecipesRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/sales-entry': typeof AdminSalesEntryRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/stock-in': typeof AdminStockInRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -153,13 +180,16 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/admin/categories'
     | '/admin/inventory'
+    | '/admin/inventory-history'
     | '/admin/login'
     | '/admin/menu'
+    | '/admin/monthly'
     | '/admin/orders'
     | '/admin/recipes'
     | '/admin/reports'
     | '/admin/sales-entry'
     | '/admin/settings'
+    | '/admin/stock-in'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -169,13 +199,16 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/admin/categories'
     | '/admin/inventory'
+    | '/admin/inventory-history'
     | '/admin/login'
     | '/admin/menu'
+    | '/admin/monthly'
     | '/admin/orders'
     | '/admin/recipes'
     | '/admin/reports'
     | '/admin/sales-entry'
     | '/admin/settings'
+    | '/admin/stock-in'
     | '/admin'
   id:
     | '__root__'
@@ -185,13 +218,16 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/admin/categories'
     | '/admin/inventory'
+    | '/admin/inventory-history'
     | '/admin/login'
     | '/admin/menu'
+    | '/admin/monthly'
     | '/admin/orders'
     | '/admin/recipes'
     | '/admin/reports'
     | '/admin/sales-entry'
     | '/admin/settings'
+    | '/admin/stock-in'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -202,13 +238,16 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AdminCategoriesRoute: typeof AdminCategoriesRoute
   AdminInventoryRoute: typeof AdminInventoryRoute
+  AdminInventoryHistoryRoute: typeof AdminInventoryHistoryRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminMenuRoute: typeof AdminMenuRoute
+  AdminMonthlyRoute: typeof AdminMonthlyRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminRecipesRoute: typeof AdminRecipesRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSalesEntryRoute: typeof AdminSalesEntryRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminStockInRoute: typeof AdminStockInRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -263,6 +302,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInventoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/inventory-history': {
+      id: '/admin/inventory-history'
+      path: '/admin/inventory-history'
+      fullPath: '/admin/inventory-history'
+      preLoaderRoute: typeof AdminInventoryHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/login': {
       id: '/admin/login'
       path: '/admin/login'
@@ -275,6 +321,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/menu'
       fullPath: '/admin/menu'
       preLoaderRoute: typeof AdminMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/monthly': {
+      id: '/admin/monthly'
+      path: '/admin/monthly'
+      fullPath: '/admin/monthly'
+      preLoaderRoute: typeof AdminMonthlyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/orders': {
@@ -312,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/stock-in': {
+      id: '/admin/stock-in'
+      path: '/admin/stock-in'
+      fullPath: '/admin/stock-in'
+      preLoaderRoute: typeof AdminStockInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -322,13 +382,16 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   AdminCategoriesRoute: AdminCategoriesRoute,
   AdminInventoryRoute: AdminInventoryRoute,
+  AdminInventoryHistoryRoute: AdminInventoryHistoryRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminMenuRoute: AdminMenuRoute,
+  AdminMonthlyRoute: AdminMonthlyRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminRecipesRoute: AdminRecipesRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminSalesEntryRoute: AdminSalesEntryRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminStockInRoute: AdminStockInRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
