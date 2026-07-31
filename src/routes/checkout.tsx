@@ -62,7 +62,12 @@ function CheckoutPage() {
   const [slot, setSlot] = useState(PICKUP_SLOTS[0]);
   const [orderType, setOrderType] = useState<"takeaway" | "delivery">("takeaway");
   const [address, setAddress] = useState("");
-  const [payment, setPayment] = useState<"first" | "pickup">("first");
+
+  // --- PAYMENT METHOD STATE ---
+  // Default set to 'first'. Commented out multi-type for future reference.
+  // const [payment, setPayment] = useState<"first" | "pickup">("first");
+  const [payment] = useState<"first">("first");
+
   const [notes, setNotes] = useState("");
   const [placing, setPlacing] = useState(false);
   const [placedOrderNumber, setPlacedOrderNumber] = useState<string | null>(null);
@@ -115,8 +120,6 @@ function CheckoutPage() {
       return;
     }
 
-    // Open the tab synchronously (inside the click handler) so browsers don't
-    // treat it as a blocked popup once we `await` the order insert below.
     const pendingWindow = window.open("", "_blank");
     setPlacing(true);
 
@@ -316,16 +319,23 @@ function CheckoutPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <PayOption
                     active={payment === "first"}
-                    onClick={() => setPayment("first")}
+                    onClick={() => {}}
                     title="Pay First"
                     subtitle="UPI QR sent on WhatsApp"
                   />
+
+                  {/* 
+                  ====================================================
+                  COMMENTED OUT: PAY AT PICKUP OPTION
+                  Uncomment below block if you ever want to enable it again.
+                  ====================================================
                   <PayOption
                     active={payment === "pickup"}
                     onClick={() => setPayment("pickup")}
                     title="Pay at Pickup"
                     subtitle="UPI, cash or card at counter"
-                  />
+                  /> 
+                  */}
                 </div>
 
                 <motion.div
@@ -335,6 +345,16 @@ function CheckoutPage() {
                   transition={{ duration: 0.3 }}
                   className="mt-3 flex gap-3 rounded-2xl border border-primary/25 bg-primary/8 p-4"
                 >
+                  <QrCode className="h-5 w-5 shrink-0 text-primary" />
+                  <p className="text-sm leading-relaxed text-foreground/90">
+                    After submitting your order on WhatsApp, our team will send you a UPI QR Code
+                    for payment confirmation.
+                  </p>
+
+                  {/* 
+                  ====================================================
+                  COMMENTED OUT: DYNAMIC PAYMENT BANNER
+                  ====================================================
                   {payment === "first" ? (
                     <QrCode className="h-5 w-5 shrink-0 text-primary" />
                   ) : (
@@ -345,6 +365,7 @@ function CheckoutPage() {
                       ? "After submitting your order on WhatsApp, our team will send you a UPI QR Code for payment confirmation."
                       : "You can pay using UPI, Cash or Card while collecting your order."}
                   </p>
+                  */}
                 </motion.div>
               </div>
 
@@ -489,7 +510,7 @@ function PayOption({
     <button
       onClick={onClick}
       className={cn(
-        "flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-300",
+        "flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-300 w-full",
         active
           ? "border-primary bg-primary/10"
           : "border-border bg-surface hover:border-primary/40",
