@@ -445,7 +445,7 @@ function CheckoutPage() {
                   </div>
                 )}
                 <SummaryRow label="Subtotal" value={formatINR(subtotal)} />
-                <SummaryRow label="Packaging & taxes" value="Included" />
+                {/* <SummaryRow label="Packaging & taxes" value="Included" /> */}
               </div>
 
               <Separator className="bg-border" />
