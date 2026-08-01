@@ -20,7 +20,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Crave Cartel — Bold Flavours. Fast Pickup." },
       {
         property: "og:description",
-        content: "Takeaway-only cloud kitchen serving chef-led burgers, biryani and wings. Order on WhatsApp and collect hot in 20 minutes.",
+        content:
+          "Takeaway-only cloud kitchen serving chef-led burgers, biryani and wings. Order on WhatsApp and collect hot in 20 minutes.",
       },
     ],
   }),

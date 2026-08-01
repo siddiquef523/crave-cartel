@@ -54,6 +54,17 @@ export function FoodCard({ item, index = 0 }: { item: MenuItem; index?: number }
           </span>
         )}
 
+        {item.discountLabel && (
+          <span
+            className={cn(
+              "absolute left-0 rounded-r-full bg-veg py-1.5 pl-3 pr-4 text-[10px] font-bold uppercase tracking-[0.16em] text-background shadow-[0_10px_30px_-12px_var(--veg)]",
+              item.bestSeller ? "top-14" : "top-4",
+            )}
+          >
+            {item.discountLabel}
+          </span>
+        )}
+
         <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full glass px-2.5 py-1 text-xs font-semibold">
           <Star className="h-3 w-3 fill-gold text-gold" />
           {item.rating}
@@ -78,7 +89,14 @@ export function FoodCard({ item, index = 0 }: { item: MenuItem; index?: number }
         </p>
 
         <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-          <span className="font-display text-xl font-extrabold">{formatINR(item.price)}</span>
+          <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="font-display text-xl font-extrabold">{formatINR(item.price)}</span>
+            {item.originalPrice != null && item.originalPrice > item.price && (
+              <span className="text-sm font-semibold text-muted-foreground line-through">
+                {formatINR(item.originalPrice)}
+              </span>
+            )}
+          </span>
 
           {qty === 0 ? (
             <Button

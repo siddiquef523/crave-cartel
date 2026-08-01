@@ -10,10 +10,12 @@ import {
   ListOrdered,
   LogOut,
   Loader2,
+  Megaphone,
   Package,
   PlusSquare,
   Settings,
   Shapes,
+  Tag,
   TruckIcon,
   UtensilsCrossed,
 } from "lucide-react";
@@ -40,6 +42,13 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Menu", to: "/admin/menu", icon: UtensilsCrossed },
       { label: "Categories", to: "/admin/categories", icon: Shapes },
       { label: "Orders", to: "/admin/orders", icon: ListOrdered },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { label: "Hero Banner", to: "/admin/banners", icon: Megaphone },
+      { label: "Discounts", to: "/admin/discounts", icon: Tag },
     ],
   },
   {

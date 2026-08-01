@@ -70,9 +70,23 @@ export function CartDrawer() {
                     />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold">{line.item.name}</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        {formatINR(line.item.price)}
+                      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
+                        <span>{formatINR(line.item.price)}</span>
+                        {line.item.originalPrice != null &&
+                          line.item.originalPrice > line.item.price && (
+                            <>
+                              <span className="line-through opacity-70">
+                                {formatINR(line.item.originalPrice)}
+                              </span>
+                              {line.item.discountLabel && (
+                                <span className="rounded-full bg-veg/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-veg">
+                                  {line.item.discountLabel}
+                                </span>
+                              )}
+                            </>
+                          )}
                       </p>
+
                       <div className="mt-2 flex items-center gap-1 rounded-full border border-border bg-surface-2 p-0.5 w-fit">
                         <button
                           aria-label="Decrease quantity"

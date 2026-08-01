@@ -56,6 +56,11 @@ function addressIsServiceable(address: string) {
 
 function CheckoutPage() {
   const { lines, subtotal, total, clear } = useCart();
+  // Total saved by live discounts (original price − payable price).
+  const savings = lines.reduce(
+    (sum, l) => sum + Math.max(0, (l.item.originalPrice ?? l.item.price) - l.item.price) * l.qty,
+    0,
+  );
   const { data: settings } = useStoreSettings();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -415,7 +420,12 @@ function CheckoutPage() {
                     <span className="min-w-0 truncate text-muted-foreground">
                       {l.qty} × {l.item.name}
                     </span>
-                    <span className="font-semibold tabular-nums">
+                    <span className="flex items-baseline gap-2 font-semibold tabular-nums">
+                      {l.item.originalPrice != null && l.item.originalPrice > l.item.price && (
+                        <span className="text-xs font-medium text-muted-foreground line-through">
+                          {formatINR(l.item.originalPrice * l.qty)}
+                        </span>
+                      )}
                       {formatINR(l.item.price * l.qty)}
                     </span>
                   </li>
@@ -425,6 +435,15 @@ function CheckoutPage() {
               <Separator className="bg-border" />
 
               <div className="space-y-2.5 text-sm">
+                {savings > 0 && (
+                  <SummaryRow label="Item total" value={formatINR(subtotal + savings)} />
+                )}
+                {savings > 0 && (
+                  <div className="flex items-center justify-between text-veg">
+                    <span className="font-semibold">Discount savings</span>
+                    <span className="font-semibold tabular-nums">− {formatINR(savings)}</span>
+                  </div>
+                )}
                 <SummaryRow label="Subtotal" value={formatINR(subtotal)} />
                 <SummaryRow label="Packaging & taxes" value="Included" />
               </div>

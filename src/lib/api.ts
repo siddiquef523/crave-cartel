@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { MenuItem } from "./menu-data";
+import { applyDiscountToItem, useLiveDiscounts } from "./discounts";
 
 /* Untyped escape hatch: the generated database types are regenerated only
    after the restaurant-management SQL is applied. */
@@ -148,6 +149,7 @@ export function toMenuItem(row: MenuItemRow, categoryName: string): MenuItem {
     price: Number(row.price),
     image: row.image_url ?? "/menu/hero-burger.jpg",
     category: categoryName,
+    categoryId: row.category_id,
     veg: row.veg,
     rating: Number(row.rating),
     bestSeller: row.best_seller,
@@ -191,14 +193,17 @@ export function useMenuItemRows() {
 export function useMenu() {
   const categories = useCategories();
   const items = useMenuItemRows();
+  const liveDiscounts = useLiveDiscounts();
 
   const nameById = new Map((categories.data ?? []).map((c) => [c.id, c.name]));
-  const menu: MenuItem[] = (items.data ?? []).map((row) =>
-    toMenuItem(
-      row,
-      row.category_id ? (nameById.get(row.category_id) ?? "Signatures") : "Signatures",
-    ),
-  );
+  const menu: MenuItem[] = (items.data ?? [])
+    .map((row) =>
+      toMenuItem(
+        row,
+        row.category_id ? (nameById.get(row.category_id) ?? "Signatures") : "Signatures",
+      ),
+    )
+    .map((item) => applyDiscountToItem(item, liveDiscounts));
 
   return {
     menu,
@@ -459,9 +464,14 @@ function storagePathFromUrl(url?: string | null) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-export async function uploadImage(file: File, previousUrl?: string | null): Promise<string> {
+export async function uploadImage(
+  file: File,
+  previousUrl?: string | null,
+  folder?: string,
+): Promise<string> {
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${crypto.randomUUID()}.${ext}`;
+  const name = `${crypto.randomUUID()}.${ext}`;
+  const path = folder ? `${folder}/${name}` : name;
 
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     cacheControl: "31536000",

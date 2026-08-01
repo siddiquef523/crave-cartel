@@ -15,6 +15,8 @@ type CartContextValue = {
   remove: (id: string) => void;
   clear: () => void;
   qtyOf: (id: string) => number;
+  /** Re-price cart lines from the live (discount-aware) menu. */
+  syncPrices: (items: MenuItem[]) => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -53,8 +55,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       add: (item) =>
         setLines((prev) => {
           const found = prev.find((l) => l.item.id === item.id);
-          if (found)
-            return prev.map((l) => (l.item.id === item.id ? { ...l, qty: l.qty + 1 } : l));
+          if (found) return prev.map((l) => (l.item.id === item.id ? { ...l, qty: l.qty + 1 } : l));
           return [...prev, { item, qty: 1 }];
         }),
       decrement: (id) =>
@@ -65,6 +66,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ),
       remove: (id) => setLines((prev) => prev.filter((l) => l.item.id !== id)),
       clear: () => setLines([]),
+      syncPrices: (items) =>
+        setLines((prev) => {
+          let changed = false;
+          const next = prev.map((l) => {
+            const fresh = items.find((i) => i.id === l.item.id);
+            if (!fresh) return l;
+            if (
+              fresh.price === l.item.price &&
+              (fresh.originalPrice ?? null) === (l.item.originalPrice ?? null) &&
+              (fresh.discountLabel ?? null) === (l.item.discountLabel ?? null)
+            )
+              return l;
+            changed = true;
+            return { ...l, item: fresh };
+          });
+          return changed ? next : prev;
+        }),
     };
   }, [lines, open]);
 
