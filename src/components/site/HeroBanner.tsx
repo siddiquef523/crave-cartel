@@ -118,7 +118,7 @@ export function HeroBannerContent({ banner }: { banner: HeroBannerRow }) {
             alt={banner.title || "Crave Cartel promotion"}
             width={1200}
             height={1408}
-            className="h-[300px] w-full object-cover object-center sm:h-[520px]"
+            className="h-[380px] w-full object-cover sm:h-[520px]"
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
         </div>
