@@ -14,7 +14,8 @@ export const Route = createFileRoute("/menu")({
       { property: "og:title", content: "Menu — Crave Cartel Cloud Kitchen" },
       {
         property: "og:description",
-        content: "Signatures, starters, mains and more. Takeaway only, ordered on WhatsApp.",
+        content:
+          "Fresh handcrafted burgers, signatures, starters and more. Order via WhatsApp for pickup or delivery.",
       },
     ],
   }),

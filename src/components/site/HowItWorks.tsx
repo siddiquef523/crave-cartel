@@ -16,7 +16,7 @@ const STEPS = [
   {
     icon: ShoppingBag,
     title: "Pickup & enjoy",
-    body: "We confirm your slot, cook fresh, and hand it over hot at the counter. Takeaway only.",
+    body: "We confirm your order, cook everything fresh, and have it ready for pickup or deliver it hot in Mahim, Citylight & Bandra.",
   },
 ];
 

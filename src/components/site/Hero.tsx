@@ -35,7 +35,7 @@ export function Hero() {
               className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-veg" />
-              Cloud Kitchen · Takeaway Only
+              Cloud Kitchen · Pickup & Delivery
             </motion.span>
 
             <motion.h1

@@ -141,7 +141,7 @@ export function CartDrawer() {
                 </Button>
               )}
               <p className="text-center text-xs text-muted-foreground">
-                Takeaway only · Order confirmed over WhatsApp
+                Pickup & Delivery · Order confirmed over WhatsApp
               </p>
             </div>
           </>

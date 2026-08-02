@@ -12,8 +12,8 @@ export function Footer() {
         <div className="space-y-4">
           <Logo />
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-            A takeaway-only cloud kitchen. Chef-led food, packed hot, ordered straight over
-            WhatsApp.
+            A chef-led cloud kitchen serving fresh, handcrafted burgers. Order easily via WhatsApp
+            for pickup or delivery in Mahim, Citylight & Bandra.
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export function Footer() {
 
       <div className="border-t border-border px-4 py-6">
         <p className="mx-auto max-w-6xl text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Crave Cartel. Takeaway only · No dine-in · Orders via
+          © {new Date().getFullYear()} Crave Cartel. Cloud Kitchen · Pickup & Delivery · Orders via
           WhatsApp.
         </p>
       </div>
