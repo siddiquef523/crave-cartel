@@ -194,7 +194,7 @@ function Dashboard() {
         name,
         qty,
         price: row?.price ?? 0,
-        image: row?.image_url ?? "/menu/hero-burger.jpg",
+        image: row?.image_url ?? "/menu/hero-burger.png",
       };
     });
 

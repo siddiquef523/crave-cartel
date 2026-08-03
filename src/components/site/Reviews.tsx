@@ -4,25 +4,25 @@ import { SectionHeading } from "./SectionHeading";
 
 const REVIEWS = [
   {
-    name: "Aarav Mehta",
-    handle: "Picked up 14 times",
+    name: "Unaiza Qureshi",
+    handle: "Verified Customer",
     rating: 5,
-    body: "The double smash is genuinely better than places charging twice as much. Order on WhatsApp, done in 18 minutes.",
-    initials: "AM",
+    body: "Tried the Cartel Boss Burger and it was honestly really good. The patty was juicy, the sauce had a unique taste, and the fries were fresh and crispy. Packaging was neat and the food reached in great condition. Will definitely order again.",
+    initials: "UQ",
   },
   {
-    name: "Rhea Kapoor",
-    handle: "Regular since launch",
+    name: "Gazala Shaikh",
+    handle: "Late Night Foodie",
     rating: 5,
-    body: "Packaging is spotless — nothing leaks, everything is still hot when I get home. That alone earns my loyalty.",
-    initials: "RK",
+    body: "Ordered late at night and the food was surprisingly fresh. The burger was loaded with flavor and the portions were worth the price. One of the better late-night food options I've tried recently.",
+    initials: "GS",
   },
   {
-    name: "Imran Sheikh",
-    handle: "Office lunch orders",
+    name: "Rohan Mehta",
+    handle: "Burger Lover",
     rating: 4,
-    body: "I order for eight people every Friday. One message, one pickup, zero chaos. The biryani disappears first.",
-    initials: "IS",
+    body: "Loved the quality of the ingredients. Everything tasted fresh and well balanced, especially the signature sauce. Fast service, good packaging, and reasonable prices. Looking forward to trying the pizzas next time.",
+    initials: "RM",
   },
 ];
 

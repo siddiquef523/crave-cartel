@@ -147,7 +147,7 @@ export function toMenuItem(row: MenuItemRow, categoryName: string): MenuItem {
     name: row.name,
     description: row.description,
     price: Number(row.price),
-    image: row.image_url ?? "/menu/hero-burger.jpg",
+    image: row.image_url ?? "/menu/hero-burger.png",
     category: categoryName,
     categoryId: row.category_id,
     veg: row.veg,

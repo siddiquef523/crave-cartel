@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import heroImg from "@/assets/hero-burger.jpg";
+import heroImg from "@/assets/hero-burger.png";
 import { HERO_BANNER_TYPE_LABELS, type HeroBannerRow } from "@/lib/marketing";
 
 /**

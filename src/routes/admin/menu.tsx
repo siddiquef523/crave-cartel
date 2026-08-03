@@ -204,7 +204,7 @@ function MenuAdmin() {
             >
               <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3 p-3">
                 <img
-                  src={item.image_url ?? "/menu/hero-burger.jpg"}
+                  src={item.image_url ?? "/menu/hero-burger.png"}
                   alt={item.name}
                   loading="lazy"
                   width={176}
@@ -249,7 +249,12 @@ function MenuAdmin() {
               </div>
 
               <div className="flex gap-2 border-t border-border px-4 py-3">
-                <Button variant="ghostline" size="sm" className="flex-1" onClick={() => openEdit(item)}>
+                <Button
+                  variant="ghostline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => openEdit(item)}
+                >
                   <Pencil className="h-3.5 w-3.5" /> Edit
                 </Button>
                 <Button
@@ -292,7 +297,12 @@ function MenuAdmin() {
             <div className="space-y-2">
               <Label className="text-sm font-semibold">Item image</Label>
               <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-border bg-surface px-6 py-8 text-center transition-colors hover:border-primary/50">
-                <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
                 {form.image_url && !uploading ? (
                   <img
                     src={form.image_url}
@@ -358,7 +368,11 @@ function MenuAdmin() {
             </div>
 
             <div className="space-y-2.5 rounded-2xl border border-border bg-surface p-4">
-              <ToggleRow label="Vegetarian" checked={form.veg} onChange={() => update("veg", !form.veg)} />
+              <ToggleRow
+                label="Vegetarian"
+                checked={form.veg}
+                onChange={() => update("veg", !form.veg)}
+              />
               <ToggleRow
                 label="Available"
                 checked={form.available}

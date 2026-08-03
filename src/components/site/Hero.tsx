@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { ArrowRight, Clock, Star, UtensilsCrossed } from "lucide-react";
-import heroImg from "@/assets/hero-burger.jpg";
+import heroImg from "@/assets/hero-burger.png";
 import { Button } from "@/components/ui/button";
 import { useActiveHeroBanner } from "@/lib/marketing";
 import { HeroBannerContent } from "./HeroBanner";

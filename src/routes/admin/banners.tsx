@@ -254,7 +254,7 @@ function HeroBannerAdmin() {
               >
                 <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4 p-4">
                   <img
-                    src={b.image_url || "/menu/hero-burger.jpg"}
+                    src={b.image_url || "/menu/hero-burger.png"}
                     alt={b.title}
                     className="h-24 w-full rounded-2xl object-cover"
                   />
