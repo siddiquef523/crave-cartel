@@ -19,11 +19,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { useCart } from "@/lib/cart";
+import { useCart, type CartLine } from "@/lib/cart";
 import { useOrderingEnabled } from "@/lib/store-status";
 import { StoreClosedBanner } from "@/components/site/StoreStatus";
 import { formatINR } from "@/lib/menu-data";
 import { placeOrder, useStoreSettings } from "@/lib/api";
+import { useVipStatus, vipSaving, VIP_DISCOUNT_PERCENT } from "@/lib/vip";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/checkout")({
@@ -55,15 +56,28 @@ function addressIsServiceable(address: string) {
 }
 
 function CheckoutPage() {
-  const { lines, subtotal, total, clear } = useCart();
-  // Total saved by live discounts (original price − payable price).
-  const savings = lines.reduce(
+  const { lines, subtotal, clear } = useCart();
+  // Total saved by live marketing discounts (original price − payable price).
+  const marketingSavings = lines.reduce(
     (sum, l) => sum + Math.max(0, (l.item.originalPrice ?? l.item.price) - l.item.price) * l.qty,
     0,
   );
   const { data: settings } = useStoreSettings();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+
+  /* Lifetime VIP discount: looked up from the saved mobile numbers. Discounts
+     never stack — VIP has the highest priority, so when it applies the
+     marketing discounts are ignored and 10% comes off the item total. */
+  const { data: isVip = false } = useVipStatus(phone);
+  const itemTotal = subtotal + marketingSavings;
+  const savings = isVip ? vipSaving(itemTotal) : marketingSavings;
+  const total = itemTotal - savings;
+  /* With VIP the marketing price is replaced by the original price, and the
+     flat 10% is taken off the order total instead. */
+  const linePrice = (l: CartLine) =>
+    isVip ? (l.item.originalPrice ?? l.item.price) : l.item.price;
+
   const [slot, setSlot] = useState(PICKUP_SLOTS[0]);
   const [orderType, setOrderType] = useState<"takeaway" | "delivery">("takeaway");
   const [address, setAddress] = useState("");
@@ -106,9 +120,16 @@ function CheckoutPage() {
       `Payment Method: ${payment === "first" ? "Pay First (UPI)" : "Pay at Pickup"}`,
       "",
       "*Items*",
-      ...lines.map((l) => `• ${l.qty} × ${l.item.name} — ${formatINR(l.item.price * l.qty)}`),
+      ...lines.map((l) => `• ${l.qty} × ${l.item.name} — ${formatINR(linePrice(l) * l.qty)}`),
       "",
-      `Subtotal: ${formatINR(subtotal)}`,
+      `Item Total: ${formatINR(itemTotal)}`,
+      ...(savings > 0
+        ? [
+            isVip
+              ? `VIP Lifetime Discount (${VIP_DISCOUNT_PERCENT}%): − ${formatINR(savings)}`
+              : `Discount: − ${formatINR(savings)}`,
+          ]
+        : []),
       `*Grand Total: ${formatINR(total)}*`,
       notes ? `\nInstructions: ${notes}` : "",
       ...(isDelivery
@@ -141,7 +162,7 @@ function CheckoutPage() {
         items: lines.map((l) => ({
           menu_item_id: l.item.id,
           name: l.item.name,
-          price: l.item.price,
+          price: linePrice(l),
           qty: l.qty,
         })),
       });
@@ -414,6 +435,18 @@ function CheckoutPage() {
                 </span>
               </div>
 
+              {isVip && (
+                <div className="flex items-start gap-2 rounded-2xl border border-veg/30 bg-veg/10 px-4 py-3 text-sm text-veg">
+                  <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    <span className="block font-semibold">VIP Customer</span>
+                    <span className="block text-xs">
+                      {VIP_DISCOUNT_PERCENT}% Lifetime Discount Applied
+                    </span>
+                  </span>
+                </div>
+              )}
+
               <ul className="space-y-3">
                 {(lines.length ? lines : []).map((l) => (
                   <li key={l.item.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-sm">
@@ -421,12 +454,14 @@ function CheckoutPage() {
                       {l.qty} × {l.item.name}
                     </span>
                     <span className="flex items-baseline gap-2 font-semibold tabular-nums">
-                      {l.item.originalPrice != null && l.item.originalPrice > l.item.price && (
-                        <span className="text-xs font-medium text-muted-foreground line-through">
-                          {formatINR(l.item.originalPrice * l.qty)}
-                        </span>
-                      )}
-                      {formatINR(l.item.price * l.qty)}
+                      {!isVip &&
+                        l.item.originalPrice != null &&
+                        l.item.originalPrice > l.item.price && (
+                          <span className="text-xs font-medium text-muted-foreground line-through">
+                            {formatINR(l.item.originalPrice * l.qty)}
+                          </span>
+                        )}
+                      {formatINR(linePrice(l) * l.qty)}
                     </span>
                   </li>
                 ))}
@@ -435,16 +470,18 @@ function CheckoutPage() {
               <Separator className="bg-border" />
 
               <div className="space-y-2.5 text-sm">
-                {savings > 0 && (
-                  <SummaryRow label="Item total" value={formatINR(subtotal + savings)} />
-                )}
+                {savings > 0 && <SummaryRow label="Item total" value={formatINR(itemTotal)} />}
                 {savings > 0 && (
                   <div className="flex items-center justify-between text-veg">
-                    <span className="font-semibold">Discount savings</span>
+                    <span className="font-semibold">
+                      {isVip
+                        ? `VIP lifetime discount (${VIP_DISCOUNT_PERCENT}%)`
+                        : "Discount savings"}
+                    </span>
                     <span className="font-semibold tabular-nums">− {formatINR(savings)}</span>
                   </div>
                 )}
-                <SummaryRow label="Subtotal" value={formatINR(subtotal)} />
+                <SummaryRow label="Subtotal" value={formatINR(total)} />
                 {/* <SummaryRow label="Packaging & taxes" value="Included" /> */}
               </div>
 

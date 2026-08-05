@@ -5,6 +5,7 @@ import {
   BarChart3,
   CalendarCheck,
   ChefHat,
+  Crown,
   History,
   LayoutDashboard,
   ListOrdered,
@@ -12,6 +13,7 @@ import {
   Loader2,
   Megaphone,
   Package,
+  FlaskConical,
   PlusSquare,
   Settings,
   Shapes,
@@ -49,6 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Hero Banner", to: "/admin/banners", icon: Megaphone },
       { label: "Discounts", to: "/admin/discounts", icon: Tag },
+      { label: "VIP Customers", to: "/admin/vip-customers", icon: Crown },
     ],
   },
   {
@@ -59,6 +62,8 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Stock In", to: "/admin/stock-in", icon: TruckIcon },
       { label: "Inventory History", to: "/admin/inventory-history", icon: History },
       { label: "Recipes", to: "/admin/recipes", icon: ChefHat },
+      { label: "Production", to: "/admin/production", icon: FlaskConical },
+
       { label: "Reports", to: "/admin/reports", icon: BarChart3 },
       { label: "Monthly Cycle", to: "/admin/monthly", icon: CalendarCheck },
     ],

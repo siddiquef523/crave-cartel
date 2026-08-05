@@ -116,10 +116,14 @@ export type IngredientRow = {
   notes: string | null;
 };
 
+/** Optional grouping inside a menu item's recipe. */
+export type RecipeSection = "main" | "sauces" | "dip";
+
 export type RecipeRow = {
   menu_item_id: string;
   ingredient_id: string;
   qty_per_unit: number;
+  section: RecipeSection;
 };
 
 export type InventoryReason = "sale" | "restock" | "waste" | "adjustment" | "reversal";
@@ -147,7 +151,7 @@ export function toMenuItem(row: MenuItemRow, categoryName: string): MenuItem {
     name: row.name,
     description: row.description,
     price: Number(row.price),
-    image: row.image_url ?? "/menu/hero-burger.png",
+    image: row.image_url ?? "/menu/hero-burger.jpg",
     category: categoryName,
     categoryId: row.category_id,
     veg: row.veg,
@@ -585,12 +589,17 @@ export function useSaveRecipeLine() {
 export function useDeleteRecipeLine() {
   const invalidate = useInvalidate(["recipes"]);
   return useMutation({
-    mutationFn: async (input: { menu_item_id: string; ingredient_id: string }) => {
+    mutationFn: async (input: {
+      menu_item_id: string;
+      ingredient_id: string;
+      section: RecipeSection;
+    }) => {
       const { error } = await sb
         .from("recipes")
         .delete()
         .eq("menu_item_id", input.menu_item_id)
-        .eq("ingredient_id", input.ingredient_id);
+        .eq("ingredient_id", input.ingredient_id)
+        .eq("section", input.section);
       if (error) throw new Error(error.message);
     },
     onSuccess: invalidate,

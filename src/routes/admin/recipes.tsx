@@ -19,6 +19,7 @@ import {
   useMenuItemRows,
   useRecipes,
   useSaveRecipeLine,
+  type RecipeSection,
 } from "@/lib/api";
 
 export const Route = createFileRoute("/admin/recipes")({
@@ -36,6 +37,12 @@ export const Route = createFileRoute("/admin/recipes")({
   component: RecipesPage,
 });
 
+const SECTIONS: { value: RecipeSection; label: string }[] = [
+  { value: "main", label: "Main" },
+  { value: "sauces", label: "Sauces" },
+  { value: "dip", label: "Dip" },
+];
+
 function RecipesPage() {
   const { data: menu = [] } = useMenuItemRows();
   const { data: ingredients = [] } = useIngredients();
@@ -46,6 +53,7 @@ function RecipesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newIng, setNewIng] = useState<string>("");
   const [newQty, setNewQty] = useState<number>(0);
+  const [newSection, setNewSection] = useState<RecipeSection>("main");
 
   const selected = menu.find((m) => m.id === selectedId) ?? menu[0];
   const selectedIdFinal = selected?.id;
@@ -71,6 +79,7 @@ function RecipesPage() {
         menu_item_id: selectedIdFinal,
         ingredient_id: newIng,
         qty_per_unit: newQty,
+        section: newSection,
       });
       setNewIng("");
       setNewQty(0);
@@ -139,58 +148,75 @@ function RecipesPage() {
                 </div>
               </div>
 
-              <div className="mt-5 overflow-hidden rounded-xl border border-border">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
-                      <th className="px-4 py-3">Ingredient</th>
-                      <th className="px-4 py-3">Qty per unit</th>
-                      <th className="px-4 py-3">Line cost</th>
-                      <th className="px-4 py-3"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentLines.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                          No ingredients in this recipe yet
-                        </td>
-                      </tr>
-                    )}
-                    {currentLines.map((l) => {
-                      const ing = ingredients.find((i) => i.id === l.ingredient_id);
-                      const lineCost = Number(l.qty_per_unit) * Number(ing?.cost_per_unit ?? 0);
-                      return (
-                        <tr
-                          key={l.ingredient_id}
-                          className="border-b border-border/60 last:border-b-0"
-                        >
-                          <td className="px-4 py-3 font-semibold">{ing?.name ?? "?"}</td>
-                          <td className="px-4 py-3 font-mono tabular-nums">
-                            {Number(l.qty_per_unit)} {ing?.unit}
-                          </td>
-                          <td className="px-4 py-3 tabular-nums">₹{lineCost.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              className="text-muted-foreground hover:text-destructive"
-                              onClick={() =>
-                                del.mutate({
-                                  menu_item_id: l.menu_item_id,
-                                  ingredient_id: l.ingredient_id,
-                                })
-                              }
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              {SECTIONS.map((section) => {
+                const lines = currentLines.filter((l) => l.section === section.value);
+                /* Sauces and Dip are optional — only shown when used. */
+                if (lines.length === 0 && section.value !== "main") return null;
+                return (
+                  <div key={section.value} className="mt-5">
+                    <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      {section.label}
+                    </p>
+                    <div className="overflow-hidden rounded-xl border border-border">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                            <th className="px-4 py-3">Ingredient</th>
+                            <th className="px-4 py-3">Qty per unit</th>
+                            <th className="px-4 py-3">Line cost</th>
+                            <th className="px-4 py-3"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lines.length === 0 && (
+                            <tr>
+                              <td
+                                colSpan={4}
+                                className="px-4 py-8 text-center text-muted-foreground"
+                              >
+                                No ingredients in this recipe yet
+                              </td>
+                            </tr>
+                          )}
+                          {lines.map((l) => {
+                            const ing = ingredients.find((i) => i.id === l.ingredient_id);
+                            const lineCost =
+                              Number(l.qty_per_unit) * Number(ing?.cost_per_unit ?? 0);
+                            return (
+                              <tr
+                                key={`${l.section}-${l.ingredient_id}`}
+                                className="border-b border-border/60 last:border-b-0"
+                              >
+                                <td className="px-4 py-3 font-semibold">{ing?.name ?? "?"}</td>
+                                <td className="px-4 py-3 font-mono tabular-nums">
+                                  {Number(l.qty_per_unit)} {ing?.unit}
+                                </td>
+                                <td className="px-4 py-3 tabular-nums">₹{lineCost.toFixed(2)}</td>
+                                <td className="px-4 py-3 text-right">
+                                  <button
+                                    className="text-muted-foreground hover:text-destructive"
+                                    onClick={() =>
+                                      del.mutate({
+                                        menu_item_id: l.menu_item_id,
+                                        ingredient_id: l.ingredient_id,
+                                        section: l.section,
+                                      })
+                                    }
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
 
-              <div className="mt-4 grid gap-3 rounded-xl border border-dashed border-border p-4 sm:grid-cols-[minmax(0,1fr)_140px_auto]">
+              <div className="mt-4 grid gap-3 rounded-xl border border-dashed border-border p-4 sm:grid-cols-[minmax(0,1fr)_140px_140px_auto]">
                 <div>
                   <Label>Add ingredient</Label>
                   <Select value={newIng} onValueChange={setNewIng}>
@@ -199,12 +225,35 @@ function RecipesPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {ingredients
-                        .filter((i) => !currentLines.some((l) => l.ingredient_id === i.id))
+                        .filter(
+                          (i) =>
+                            !currentLines.some(
+                              (l) => l.ingredient_id === i.id && l.section === newSection,
+                            ),
+                        )
                         .map((i) => (
                           <SelectItem key={i.id} value={i.id}>
                             {i.name} ({i.unit})
                           </SelectItem>
                         ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Section</Label>
+                  <Select
+                    value={newSection}
+                    onValueChange={(v) => setNewSection(v as RecipeSection)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SECTIONS.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

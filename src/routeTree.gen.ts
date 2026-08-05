@@ -23,11 +23,13 @@ import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminMenuRouteImport } from './routes/admin/menu'
 import { Route as AdminMonthlyRouteImport } from './routes/admin/monthly'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
+import { Route as AdminProductionRouteImport } from './routes/admin/production'
 import { Route as AdminRecipesRouteImport } from './routes/admin/recipes'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AdminSalesEntryRouteImport } from './routes/admin/sales-entry'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminStockInRouteImport } from './routes/admin/stock-in'
+import { Route as AdminVipCustomersRouteImport } from './routes/admin/vip-customers'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -99,6 +101,11 @@ const AdminOrdersRoute = AdminOrdersRouteImport.update({
   path: '/admin/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminProductionRoute = AdminProductionRouteImport.update({
+  id: '/admin/production',
+  path: '/admin/production',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRecipesRoute = AdminRecipesRouteImport.update({
   id: '/admin/recipes',
   path: '/admin/recipes',
@@ -124,6 +131,11 @@ const AdminStockInRoute = AdminStockInRouteImport.update({
   path: '/admin/stock-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminVipCustomersRoute = AdminVipCustomersRouteImport.update({
+  id: '/admin/vip-customers',
+  path: '/admin/vip-customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -139,11 +151,13 @@ export interface FileRoutesByFullPath {
   '/admin/menu': typeof AdminMenuRoute
   '/admin/monthly': typeof AdminMonthlyRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/production': typeof AdminProductionRoute
   '/admin/recipes': typeof AdminRecipesRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/sales-entry': typeof AdminSalesEntryRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/stock-in': typeof AdminStockInRoute
+  '/admin/vip-customers': typeof AdminVipCustomersRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -160,11 +174,13 @@ export interface FileRoutesByTo {
   '/admin/menu': typeof AdminMenuRoute
   '/admin/monthly': typeof AdminMonthlyRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/production': typeof AdminProductionRoute
   '/admin/recipes': typeof AdminRecipesRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/sales-entry': typeof AdminSalesEntryRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/stock-in': typeof AdminStockInRoute
+  '/admin/vip-customers': typeof AdminVipCustomersRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -182,11 +198,13 @@ export interface FileRoutesById {
   '/admin/menu': typeof AdminMenuRoute
   '/admin/monthly': typeof AdminMonthlyRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/production': typeof AdminProductionRoute
   '/admin/recipes': typeof AdminRecipesRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/sales-entry': typeof AdminSalesEntryRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/stock-in': typeof AdminStockInRoute
+  '/admin/vip-customers': typeof AdminVipCustomersRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -205,11 +223,13 @@ export interface FileRouteTypes {
     | '/admin/menu'
     | '/admin/monthly'
     | '/admin/orders'
+    | '/admin/production'
     | '/admin/recipes'
     | '/admin/reports'
     | '/admin/sales-entry'
     | '/admin/settings'
     | '/admin/stock-in'
+    | '/admin/vip-customers'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -226,11 +246,13 @@ export interface FileRouteTypes {
     | '/admin/menu'
     | '/admin/monthly'
     | '/admin/orders'
+    | '/admin/production'
     | '/admin/recipes'
     | '/admin/reports'
     | '/admin/sales-entry'
     | '/admin/settings'
     | '/admin/stock-in'
+    | '/admin/vip-customers'
     | '/admin'
   id:
     | '__root__'
@@ -247,11 +269,13 @@ export interface FileRouteTypes {
     | '/admin/menu'
     | '/admin/monthly'
     | '/admin/orders'
+    | '/admin/production'
     | '/admin/recipes'
     | '/admin/reports'
     | '/admin/sales-entry'
     | '/admin/settings'
     | '/admin/stock-in'
+    | '/admin/vip-customers'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -269,11 +293,13 @@ export interface RootRouteChildren {
   AdminMenuRoute: typeof AdminMenuRoute
   AdminMonthlyRoute: typeof AdminMonthlyRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
+  AdminProductionRoute: typeof AdminProductionRoute
   AdminRecipesRoute: typeof AdminRecipesRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSalesEntryRoute: typeof AdminSalesEntryRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStockInRoute: typeof AdminStockInRoute
+  AdminVipCustomersRoute: typeof AdminVipCustomersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -377,6 +403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/production': {
+      id: '/admin/production'
+      path: '/admin/production'
+      fullPath: '/admin/production'
+      preLoaderRoute: typeof AdminProductionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/recipes': {
       id: '/admin/recipes'
       path: '/admin/recipes'
@@ -412,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStockInRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/vip-customers': {
+      id: '/admin/vip-customers'
+      path: '/admin/vip-customers'
+      fullPath: '/admin/vip-customers'
+      preLoaderRoute: typeof AdminVipCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -429,11 +469,13 @@ const rootRouteChildren: RootRouteChildren = {
   AdminMenuRoute: AdminMenuRoute,
   AdminMonthlyRoute: AdminMonthlyRoute,
   AdminOrdersRoute: AdminOrdersRoute,
+  AdminProductionRoute: AdminProductionRoute,
   AdminRecipesRoute: AdminRecipesRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminSalesEntryRoute: AdminSalesEntryRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStockInRoute: AdminStockInRoute,
+  AdminVipCustomersRoute: AdminVipCustomersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
